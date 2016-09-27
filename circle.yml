@@ -1,0 +1,17 @@
+machine:
+  python:
+    # Using 3.5.1 for now since 3.5.2 is much slower to install.
+    # Watch for official support here: https://circleci.com/docs/build-image-trusty/
+    version: 3.5.1
+  environment:
+    POSTGRES_TESTSERVER: postgresql:///ubuntu
+
+dependencies:
+  override:
+    - pip install -U pip
+    - pip install -U -r test_requirements.txt
+    - pip install -r requirements.txt
+
+test:
+  override:
+    - py.test --cov=src/python -r w src/python --junitxml=$CIRCLE_TEST_REPORTS/api_service.xml

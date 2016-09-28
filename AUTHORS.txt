@@ -1,0 +1,11 @@
+Temporal SQLAlchemy was originally created in 2016 at Clover Health.
+
+Here is an entirely incomplete list of amazing contributors.
+
+    Alec Clowes <alec.clowes@cloverhealth.com>
+    Ben Kudria <ben.kudria@cloverhealth.com>
+    Dave Flerlage <dave.flerlage@cloverhealth.com>
+    Grant Wu <grant.wu@cloverhealth.com>
+    Joey Leingang <joey.leingang@cloverhealth.com>
+    Paul Zumbrun <paul.zumbrun@cloverhealth.com>
+    Sara Packman <sara.packman@cloverhealth.com>

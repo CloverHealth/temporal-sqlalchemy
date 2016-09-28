@@ -1,0 +1,38 @@
+# compile
+*.pyc
+__pycache__/
+
+# build
+/build/
+
+# dist
+/dist/
+
+# test
+/.tox/
+/tests/.coverage
+/tests/htmlcov/
+.cache/
+
+# cache
+/.eggs/
+*.egg-info/
+/wheelhouse/
+
+# misc
+# pyenv
+.python-version
+# osx
+.DS_Store
+# emacs
+/.dir-locals.el
+/TAGS
+/GPATH
+/GRTAGS
+/GTAGS
+/src/TAGS
+/src/GPATH
+/src/GRTAGS
+/src/GTAGS
+# pyCharm
+/.idea/

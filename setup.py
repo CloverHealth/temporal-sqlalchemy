@@ -7,7 +7,7 @@ setup(
     url='https://github.com/cloverhealth/temporal-sqlalchemy',
     author='Clover Health Engineering',
     author_email='engineering@cloverhealth.com',
-    license='MIT',
+    license='BSD',
 
     classifiers=[
         'Development Status :: 4 - Beta',

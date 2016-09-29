@@ -9,3 +9,4 @@ Here is an entirely incomplete list of amazing contributors.
     Joey Leingang <joey.leingang@cloverhealth.com>
     Paul Zumbrun <paul.zumbrun@cloverhealth.com>
     Sara Packman <sara.packman@cloverhealth.com>
+    Vansi Vallabhaneni <vansi.vallabhaneni@cloverhealth.com>

@@ -1,8 +1,19 @@
+"""Setup script for temporal-sqlalchemy"""
+
+import sys
 from setuptools import setup, find_packages
+
+if sys.version_info < (3, 5):
+    raise Exception('Python version < 3.5 are not supported.')
+
+# Get version information without importing the package
+__version__ = None
+exec(open('temporal-sqlalchemy/version.py', 'r').read())  # pylint: disable=exec-used
+
 
 setup(
     name='temporal-sqlalchemy',
-    version='0.1.0',
+    version=__version__,
     description='Temporal Decorator for Sqlalchemy ORM',
     url='https://github.com/cloverhealth/temporal-sqlalchemy',
     author='Clover Health Engineering',

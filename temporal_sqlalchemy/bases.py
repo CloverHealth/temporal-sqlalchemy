@@ -137,7 +137,6 @@ class Clocked(object):
     """
     vclock = sa.Column(sa.Integer, default=1)
     
-    id = None  # type: typing.Union[int, uuid.UUID]
     clock = None  # type: orm.relationship
     temporal_options = None  # type: ClockedOption
     first_tick = None  # type:  EntityClock

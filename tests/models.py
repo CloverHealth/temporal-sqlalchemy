@@ -3,7 +3,6 @@ import datetime
 import sqlalchemy as sa
 import sqlalchemy.ext.mutable as mutable
 import sqlalchemy.orm as orm
-import sqlalchemy.testing.entities as entities
 import sqlalchemy.dialects.postgresql as sap
 import sqlalchemy.ext.declarative as declarative
 
@@ -18,11 +17,11 @@ activity_metadata = sa.MetaData()
 related_metadata = sa.MetaData()
 edgecase_metadata = sa.MetaData()
 
-Base = declarative.declarative_base(cls=entities.ComparableEntity, metadata=basic_metadata)
-EdgeCaseBase = declarative.declarative_base(cls=entities.ComparableEntity, metadata=edgecase_metadata)
-ExpectedFailBase = declarative.declarative_base(cls=entities.ComparableEntity, metadata=expected_fail_metadata)
-ActivityBase = declarative.declarative_base(cls=entities.ComparableEntity, metadata=activity_metadata)
-RelatedBase = declarative.declarative_base(cls=entities.ComparableEntity, metadata=related_metadata)
+Base = declarative.declarative_base(metadata=basic_metadata)
+EdgeCaseBase = declarative.declarative_base(metadata=edgecase_metadata)
+ExpectedFailBase = declarative.declarative_base(metadata=expected_fail_metadata)
+ActivityBase = declarative.declarative_base(metadata=activity_metadata)
+RelatedBase = declarative.declarative_base(metadata=related_metadata)
 AbstractConcreteBase = declarative.AbstractConcreteBase
 
 

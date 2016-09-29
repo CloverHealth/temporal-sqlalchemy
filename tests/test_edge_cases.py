@@ -7,7 +7,7 @@ from . import shared, models
 
 class TestEdgeCases(shared.DatabaseTest):
 
-    def test_indentifiers_too_long(self, session: orm.Session):
+    def test_indentifiers_too_long(self, session):
         models.edgecase_metadata.create_all(session.bind)
 
         clock_table = models.HugeIndices.temporal_options.clock_table.__table__

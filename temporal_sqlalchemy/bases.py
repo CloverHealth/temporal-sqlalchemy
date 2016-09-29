@@ -10,6 +10,8 @@ import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
 import psycopg2.extras as psql_extras
 
+from temporal_sqlalchemy import nine
+
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
 T_PROPS = typing.TypeVar('T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
@@ -39,10 +41,10 @@ class TemporalActivityMixin(object):
 
 class ClockedOption(object):
     def __init__(self,
-                 history_tables: typing.Dict[T_PROPS, typing.Type[TemporalProperty]],
+                 history_tables: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
                  temporal_props: typing.Iterable[T_PROPS],
-                 clock_table: typing.Type[EntityClock],
-                 activity_cls: typing.Type[TemporalActivityMixin] = None):
+                 clock_table: nine.Type[EntityClock],
+                 activity_cls: nine.Type[TemporalActivityMixin] = None):
         self.history_tables = history_tables
         self.temporal_props = temporal_props
 

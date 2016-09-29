@@ -11,6 +11,9 @@ def connection():
     engine = sa.create_engine(db.url())
     conn = engine.connect()
     
+    conn.execute('CREATE EXTENSION IF NOT EXISTS "%s" WITH SCHEMA pg_catalog' % 'uuid-ossp')
+    conn.execute('CREATE EXTENSION IF NOT EXISTS "%s" WITH SCHEMA pg_catalog' % 'btree_gist')
+    
     yield conn
     
     conn.close()

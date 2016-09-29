@@ -11,7 +11,7 @@ import sqlalchemy.orm.attributes as attributes
 import sqlalchemy.util as util
 import psycopg2.extras as psql_extras
 
-
+from temporal_sqlalchemy import nine
 from temporal_sqlalchemy.bases import (
     T_PROPS,
     Clocked,
@@ -49,7 +49,7 @@ def get_history_model(target: attributes.InstrumentedAttribute) -> TemporalPrope
 
 # TODO kwargs to override default clock table and history tables prefix
 def add_clock(*props: typing.Iterable[str],
-              activity_cls: typing.Type[TemporalActivityMixin] = None,
+              activity_cls: nine.Type[TemporalActivityMixin] = None,
               temporal_schema: typing.Optional[str] = None):
     """ decorator to add a clock and history tables to an orm model, primary interface into temporal """
 
@@ -80,7 +80,7 @@ def add_clock(*props: typing.Iterable[str],
 
         clocked.clock = [initial_clock_tick]
 
-    def make_temporal(cls: typing.Type[Clocked]):
+    def make_temporal(cls: nine.Type[Clocked]):
         assert issubclass(cls, Clocked), "add temporal.Clocked to %r" % cls
         mapper = cls.__mapper__
 
@@ -185,7 +185,7 @@ def _truncate_identifier(identifier: str) -> str:
     return identifier
 
 
-def build_clock_class(name: str, metadata: sa.MetaData, props: typing.Dict) -> typing.Type[EntityClock]:
+def build_clock_class(name: str, metadata: sa.MetaData, props: typing.Dict) -> nine.Type[EntityClock]:
     return type(
         '%sClock' % name,
         (EntityClock, declarative.declarative_base(metadata=metadata)),
@@ -193,7 +193,7 @@ def build_clock_class(name: str, metadata: sa.MetaData, props: typing.Dict) -> t
     )
 
 
-def build_history_class(prop: T_PROPS, schema: str = None) -> typing.Type[TemporalProperty]:
+def build_history_class(prop: T_PROPS, schema: str = None) -> nine.Type[TemporalProperty]:
     """build a sql alchemy table for given prop"""
     cls = prop.parent.class_
     class_name = "%s%s_%s" % (cls.__name__, 'History', prop.key)

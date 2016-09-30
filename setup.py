@@ -8,7 +8,7 @@ if sys.version_info < (3, 5):
 
 # Get version information without importing the package
 __version__ = None
-exec(open('temporal-sqlalchemy/version.py', 'r').read())  # pylint: disable=exec-used
+exec(open('temporal-sqlalchemy/version.py', 'r').read())
 
 
 setup(

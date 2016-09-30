@@ -16,7 +16,7 @@ def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
 
 def persist_history(session: orm.Session, flush_context, instances):
     if any(_temporal_models(session.deleted)):
-        raise ValueError("Cannot delete temporal objects!!!! YOU WILL REGRET THIS!!!!")
+        raise ValueError("Cannot delete temporal objects.")
 
     correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     for obj in _temporal_models(itertools.chain(session.dirty, session.new)):

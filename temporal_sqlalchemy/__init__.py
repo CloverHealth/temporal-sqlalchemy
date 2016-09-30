@@ -1,3 +1,4 @@
+# flake8: noqa
 from .version import __version__
 from .bases import Clocked, ClockedOption, EntityClock, TemporalProperty, TemporalActivityMixin
 from .session import temporal_session, persist_history

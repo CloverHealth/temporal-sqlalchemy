@@ -12,3 +12,4 @@ dependencies:
 test:
   override:
     - py.test -r w tests --junitxml=$CIRCLE_TEST_REPORTS/temporal-sqlalchemy.xml
+    - flake8

@@ -1,0 +1,42 @@
+# necessary until containers support postgres 9.5
+sudo: required
+dist: trusty
+
+language: python
+
+matrix:
+  include:
+    - python: 3.5.2
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.5.2
+      addons:
+        postgresql: 9.4
+      env: PG=9.4
+    - python: 3.5.2
+      addons:
+        postgresql: 9.3
+      env: PG=9.3
+    - python: 3.5.0
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.4
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.3
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+
+before_install:
+  - pip install -U pip
+  - pip install -U -r test-requirements.txt
+
+install: python setup.py -q install
+
+script: pytest --cov=temporal_sqlalchemy tests
+
+after_script: coveralls

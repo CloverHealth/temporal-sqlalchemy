@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import uuid
 import typing
 
@@ -175,7 +176,7 @@ def _copy_column(column: sa.Column) -> sa.Column:
     new.default = new.server_default = None
 
     return new
-    
+
 
 def _truncate_identifier(identifier: str) -> str:
     """ensure identifier doesn't exceed max characters postgres allows"""
@@ -256,7 +257,6 @@ def build_history_table(prop: T_PROPS, schema: str = None) -> sa.Table:
                     sa.Column('effective', sap.TSTZRANGE, default=effective_now, nullable=False),
                     sa.Column('vclock', sap.INT4RANGE, nullable=False),
                     sa.Column('entity_id', sa.ForeignKey(foreign_key)),
-                    *columns,
-                    *constraints,
+                    *itertools.chain(columns, constraints),
                     schema=schema or local_table.schema,
                     keep_existing=True)  # memoization ftw

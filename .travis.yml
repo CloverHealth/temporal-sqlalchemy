@@ -35,8 +35,8 @@ before_install:
   - pip install -U pip
   - pip install -U -r test-requirements.txt
 
-install: python setup.py -q install
+install: python setup.py develop
 
-script: pytest --cov=temporal_sqlalchemy tests
+script: python setup.py test
 
 after_script: coveralls

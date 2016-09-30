@@ -19,7 +19,7 @@ T_PROPS = typing.TypeVar('T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
 
 class EntityClock(object):
     entity_id = None  # type: typing.Union[int, uuid.UUID]
-    
+
     tick = sa.Column(sa.Integer, primary_key=True, autoincrement=False)
     timestamp = sa.Column(sa.DateTime(True), server_default=sa.func.current_timestamp())
 
@@ -113,7 +113,7 @@ class ClockedOption(object):
                 # Add new history row
                 hist[prop.key] = changes.added[0]
                 session.add(
-                    cls(**hist, vclock=new_clock.vclock, effective=new_clock.effective)
+                    cls(vclock=new_clock.vclock, effective=new_clock.effective, **hist)
                 )
 
 
@@ -136,7 +136,7 @@ class Clocked(object):
     >>> assert my_instance.vclock == 1
     """
     vclock = sa.Column(sa.Integer, default=1)
-    
+
     clock = None  # type: orm.relationship
     temporal_options = None  # type: ClockedOption
     first_tick = None  # type:  EntityClock

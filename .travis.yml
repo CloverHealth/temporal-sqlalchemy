@@ -31,9 +31,7 @@ matrix:
         postgresql: 9.5
       env: PG=9.5
 
-before_install:
-  - pip install -U pip
-  - pip install -U -r test-requirements.txt
+before_install: pip install -U pip
 
 install: python setup.py develop
 

@@ -5,11 +5,10 @@ machine:
     version: 3.5.1
 
 dependencies:
-  override:
+  pre:
     - pip install -U pip
-    - pip install -U -r requirements.txt
-    - pip install -U -r test-requirements.txt
+    - python setup.py develop
 
 test:
   override:
-    - py.test -r w tests --junitxml=$CIRCLE_TEST_REPORTS/temporal-sqlalchemy.xml
+    - python setup.py test

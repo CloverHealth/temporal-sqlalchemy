@@ -8,13 +8,10 @@ if sys.version_info < (3, 5):
 
 # Get version information without importing the package
 __version__ = None
-exec(open('temporal-sqlalchemy/version.py', 'r').read())
+exec(open('temporal_sqlalchemy/version.py', 'r').read())
 
 SHORT_DESCRIPTION = 'Temporal Extensions for SQLAlchemy ORM'
 LONG_DESCRIPTION = open('README.rst', 'r').read()
-
-DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
-TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
 
 CLASSIFIERS = [
     'Development Status :: 4 - Beta',
@@ -33,6 +30,13 @@ CLASSIFIERS = [
     'Topic :: Software Development :: Libraries :: Python Modules',
 ]
 
+DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
+TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
+SETUP_DEPENDENCIES = []
+if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
+    SETUP_DEPENDENCIES.append('pytest-runner')
+
+
 setuptools.setup(
     name='temporal-sqlalchemy',
     version=__version__,
@@ -47,5 +51,6 @@ setuptools.setup(
     keywords='sqlalchemy postgresql orm temporal',
     classifiers=CLASSIFIERS,
     install_requires=DEPENDENCIES,
-    tests_require=['pytest'],
+    setup_requires=SETUP_DEPENDENCIES,
+    tests_require=TEST_DEPENDENCIES,
 )

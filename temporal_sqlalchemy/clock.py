@@ -252,7 +252,10 @@ def build_history_class(
     return model
 
 
-def build_history_table(cls: declarative.DeclarativeMeta, prop: T_PROPS, schema: str = None) -> sa.Table:
+def build_history_table(
+        cls: declarative.DeclarativeMeta,
+        prop: T_PROPS,
+        schema: str = None) -> sa.Table:
     """build a sql alchemy table for given prop"""
 
     if isinstance(prop, orm.RelationshipProperty):

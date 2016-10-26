@@ -171,7 +171,8 @@ class JoinedEnumBase(Base):
     __tablename__ = 'joined_enum_base'
 
     id = auto_uuid()
-    kind = sa.Column(sap.ENUM('default', 'enum_a', 'enum_b', name='joined_enum_kind'))
+    kind = sa.Column(
+        sap.ENUM('default', 'enum_a', 'enum_b', name='joined_enum_kind'))
     is_deleted = sa.Column(sa.Boolean, default=False)
 
     __mapper_args__ = {
@@ -180,7 +181,10 @@ class JoinedEnumBase(Base):
     }
 
 
-@temporal_sqlalchemy.add_clock('val', 'is_deleted', temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'val',
+    'is_deleted',
+    temporal_schema=TEMPORAL_SCHEMA)
 class JoinedEnumA(temporal_sqlalchemy.Clocked, JoinedEnumBase):
     __tablename__ = 'joined_enum_a'
 
@@ -190,7 +194,9 @@ class JoinedEnumA(temporal_sqlalchemy.Clocked, JoinedEnumBase):
     __mapper_args__ = {'polymorphic_identity': 'enum_a'}
 
 
-@temporal_sqlalchemy.add_clock('val', 'is_deleted', temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'val',
+    'is_deleted', temporal_schema=TEMPORAL_SCHEMA)
 class JoinedEnumB(temporal_sqlalchemy.Clocked, JoinedEnumBase):
     __tablename__ = 'joined_enum_b'
 

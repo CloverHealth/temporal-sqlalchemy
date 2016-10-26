@@ -63,7 +63,8 @@ def test_joined_enums_edit(session, model, first_val, second_val):
     assert entity.is_deleted is True
 
     # query via with_polymorphic
-    entity = session.query(models.JoinedEnumBase).with_polymorphic(model).first()
+    entity = session.query(models.JoinedEnumBase)\
+        .with_polymorphic(model).first()
     assert entity.vclock == 2
     assert entity.val == second_val
     assert entity.kind == kind

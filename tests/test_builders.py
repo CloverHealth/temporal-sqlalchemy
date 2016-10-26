@@ -11,7 +11,8 @@ def test_build_history_table():
     rel_id_prop = sa.inspect(models.RelationalTemporalModel.rel_id).property
     rel_prop = sa.inspect(models.RelationalTemporalModel.rel).property
 
-    history_table = build_history_table(models.RelationalTemporalModel, rel_id_prop, models.TEMPORAL_SCHEMA)
+    history_table = build_history_table(
+        models.RelationalTemporalModel, rel_id_prop, models.TEMPORAL_SCHEMA)
 
     assert history_table == build_history_table(
         models.RelationalTemporalModel,

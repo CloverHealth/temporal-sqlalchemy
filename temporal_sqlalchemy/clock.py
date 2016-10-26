@@ -124,7 +124,7 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
         clock_table_name = _truncate_identifier("%s_clock" % entity_table_name)
 
         history_tables = {
-            p: build_history_class(p, schema)
+            p: build_history_class(cls, p, schema)
             for p in local_props | relationship_props
         }
 
@@ -221,12 +221,12 @@ def build_clock_class(
 
 
 def build_history_class(
+        cls: declarative.DeclarativeMeta,
         prop: T_PROPS,
         schema: str = None) -> nine.Type[TemporalProperty]:
     """build a sql alchemy table for given prop"""
-    cls = prop.parent.class_
     class_name = "%s%s_%s" % (cls.__name__, 'History', prop.key)
-    table = build_history_table(prop, schema)
+    table = build_history_table(cls, prop, schema)
     base_classes = (
         TemporalProperty,
         declarative.declarative_base(metadata=cls.metadata),
@@ -252,7 +252,7 @@ def build_history_class(
     return model
 
 
-def build_history_table(prop: T_PROPS, schema: str = None) -> sa.Table:
+def build_history_table(cls: declarative.DeclarativeMeta, prop: T_PROPS, schema: str = None) -> sa.Table:
     """build a sql alchemy table for given prop"""
 
     if isinstance(prop, orm.RelationshipProperty):
@@ -267,7 +267,7 @@ def build_history_table(prop: T_PROPS, schema: str = None) -> sa.Table:
         property_key = prop.key
         columns = (_copy_column(col) for col in prop.columns)
 
-    local_table = prop.parent.local_table
+    local_table = cls.__table__
     table_name = _truncate_identifier(
         '%s_%s_%s' % (local_table.name, 'history', property_key))
     index_name = _truncate_identifier('%s_effective_idx' % table_name)
@@ -289,7 +289,7 @@ def build_history_table(prop: T_PROPS, schema: str = None) -> sa.Table:
     ]
 
     # TODO: make this support different shape pks
-    foreign_key = getattr(prop.parent.class_, 'id')
+    foreign_key = getattr(cls, 'id')
     return sa.Table(
         table_name,
         prop.parent.class_.metadata,

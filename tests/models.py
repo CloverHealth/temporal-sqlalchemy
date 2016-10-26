@@ -165,3 +165,42 @@ class HugeIndices(temporal_sqlalchemy.Clocked, EdgeCaseBase):
 
     id = auto_uuid()
     really_really_really_really_really_long_column = sa.Column(sa.Integer)
+
+
+class JoinedEnumBase(Base):
+    __tablename__ = 'joined_enum_base'
+
+    id = auto_uuid()
+    kind = sa.Column(
+        sap.ENUM('default', 'enum_a', 'enum_b', name='joined_enum_kind'))
+    is_deleted = sa.Column(sa.Boolean, default=False)
+
+    __mapper_args__ = {
+        'polymorphic_on': kind,
+        'polymorphic_identity': 'default'
+    }
+
+
+@temporal_sqlalchemy.add_clock(
+    'val',
+    'is_deleted',
+    temporal_schema=TEMPORAL_SCHEMA)
+class JoinedEnumA(temporal_sqlalchemy.Clocked, JoinedEnumBase):
+    __tablename__ = 'joined_enum_a'
+
+    id = sa.Column(sa.ForeignKey(JoinedEnumBase.id), primary_key=True)
+    val = sa.Column(sap.ENUM('foo', 'foobar', name='joined_enum_a_val'))
+
+    __mapper_args__ = {'polymorphic_identity': 'enum_a'}
+
+
+@temporal_sqlalchemy.add_clock(
+    'val',
+    'is_deleted', temporal_schema=TEMPORAL_SCHEMA)
+class JoinedEnumB(temporal_sqlalchemy.Clocked, JoinedEnumBase):
+    __tablename__ = 'joined_enum_b'
+
+    id = sa.Column(sa.ForeignKey(JoinedEnumBase.id), primary_key=True)
+    val = sa.Column(sap.ENUM('bar', 'barfoo', name='joined_enum_b_val'))
+
+    __mapper_args__ = {'polymorphic_identity': 'enum_b'}

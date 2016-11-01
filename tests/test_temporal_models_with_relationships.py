@@ -8,7 +8,7 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
     @pytest.fixture(autouse=True)
     def setup(self, session):
         models.related_metadata.create_all(session.bind)
-    
+
     def test_assign_by_rel_on_init(self, session):
         related = models.RelatedTable(prop_a=1)
         parent = models.RelationalTemporalModel(
@@ -19,13 +19,16 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         session.add(parent)
         session.commit()
 
-        clock_query = session.query(models.RelationalTemporalModel.temporal_options.clock_table)
+        clock_query = session.query(
+            models.RelationalTemporalModel.temporal_options.clock_table)
         clock_tick = clock_query.first()
         assert clock_query.count() == 1
         assert clock_tick.tick == parent.vclock
-        for history_class in models.RelationalTemporalModel.temporal_options.history_tables.values():
+        for history_class in (models.RelationalTemporalModel
+                              .temporal_options.history_tables.values()):
             property_history = session.query(history_class)
-            assert property_history.count() == 1, "missing history #1 for %r" % history_class
+            assert property_history.count() == 1, \
+                "missing history #1 for %r" % history_class
 
             history = property_history.first()
             assert clock_tick.tick in history.vclock
@@ -47,10 +50,14 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         assert parent.vclock == 2
 
         rel_prop = sa.inspect(models.RelationalTemporalModel.rel).property
-        history_class = models.RelationalTemporalModel.temporal_options.history_tables[rel_prop]
+        history_class = (models.RelationalTemporalModel
+                         .temporal_options.history_tables[rel_prop])
 
-        property_history = session.query(history_class).order_by(sa.func.lower(history_class.effective).asc())
-        assert property_history.count() == 2, "missing history #2 for %r" % history_class
+        property_history = (
+            session.query(history_class)
+            .order_by(sa.func.lower(history_class.effective).asc()))
+        assert property_history.count() == 2, \
+            "missing history #2 for %r" % history_class
 
         first_history = property_history[0]
         assert first_history.vclock.upper_inf is False
@@ -77,13 +84,17 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
             parent.rel = models.RelatedTable(prop_a=1)
 
         session.commit()
-        assert parent.vclock ==2
+        assert parent.vclock == 2
 
         rel_prop = sa.inspect(models.RelationalTemporalModel.rel).property
-        history_class = models.RelationalTemporalModel.temporal_options.history_tables[rel_prop]
+        history_class = (models.RelationalTemporalModel
+                         .temporal_options.history_tables[rel_prop])
 
-        property_history = session.query(history_class).order_by(sa.func.lower(history_class.effective).asc())
-        assert property_history.count() == 1, "missing history #1 for %r" % history_class
+        property_history = (
+            session.query(history_class)
+            .order_by(sa.func.lower(history_class.effective).asc()))
+        assert property_history.count() == 1, \
+            "missing history #1 for %r" % history_class
 
         first_history = property_history[0]
         assert first_history.vclock.upper_inf
@@ -111,10 +122,14 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         assert parent.vclock == 2
 
         rel_prop = sa.inspect(models.RelationalTemporalModel.rel).property
-        history_class = models.RelationalTemporalModel.temporal_options.history_tables[rel_prop]
+        history_class = (models.RelationalTemporalModel
+                         .temporal_options.history_tables[rel_prop])
 
-        property_history = session.query(history_class).order_by(sa.func.lower(history_class.effective).asc())
-        assert property_history.count() == 2, "missing history #2 for %r" % history_class
+        property_history = (
+            session.query(history_class)
+            .order_by(sa.func.lower(history_class.effective).asc()))
+        assert property_history.count() == 2, \
+            "missing history #2 for %r" % history_class
 
         first_history = property_history[0]
         assert not first_history.vclock.upper_inf

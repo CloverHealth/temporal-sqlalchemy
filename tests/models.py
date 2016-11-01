@@ -4,7 +4,7 @@ import sqlalchemy as sa
 import sqlalchemy.ext.mutable as mutable
 import sqlalchemy.orm as orm
 import sqlalchemy.dialects.postgresql as sap
-import sqlalchemy.ext.declarative as declarative
+import sqlalchemy.ext.declarative as sa_decl
 
 import temporal_sqlalchemy
 
@@ -17,24 +17,27 @@ activity_metadata = sa.MetaData()
 related_metadata = sa.MetaData()
 edgecase_metadata = sa.MetaData()
 
-Base = declarative.declarative_base(metadata=basic_metadata)
-EdgeCaseBase = declarative.declarative_base(metadata=edgecase_metadata)
-ExpectedFailBase = declarative.declarative_base(metadata=expected_fail_metadata)
-ActivityBase = declarative.declarative_base(metadata=activity_metadata)
-RelatedBase = declarative.declarative_base(metadata=related_metadata)
-AbstractConcreteBase = declarative.AbstractConcreteBase
+Base = sa_decl.declarative_base(metadata=basic_metadata)
+EdgeCaseBase = sa_decl.declarative_base(metadata=edgecase_metadata)
+ExpectedFailBase = sa_decl.declarative_base(metadata=expected_fail_metadata)
+ActivityBase = sa_decl.declarative_base(metadata=activity_metadata)
+RelatedBase = sa_decl.declarative_base(metadata=related_metadata)
+AbstractConcreteBase = sa_decl.AbstractConcreteBase
 
 
 def auto_uuid():
     uuid_gen_expr = sa.text('uuid_generate_v4()')
-    return sa.Column(sap.UUID(as_uuid=True), primary_key=True, server_default=uuid_gen_expr)
+    return sa.Column(sap.UUID(as_uuid=True),
+                     primary_key=True, server_default=uuid_gen_expr)
 
 
 def utcnow() -> datetime.datetime:
-    return datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
-@temporal_sqlalchemy.add_clock('prop_a', 'prop_b', 'prop_c', 'prop_d', 'prop_e', 'prop_f', temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'prop_a', 'prop_b', 'prop_c', 'prop_d', 'prop_e', 'prop_f',
+    temporal_schema=TEMPORAL_SCHEMA)
 class SimpleTableTemporal(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'simple_table_temporal'
     __table_args__ = {'schema': SCHEMA}
@@ -57,8 +60,11 @@ class SimpleAbstractConcreteBaseTable(AbstractConcreteBase):
     prop_b = sa.Column(sap.TEXT)
 
 
-@temporal_sqlalchemy.add_clock('prop_a', 'prop_b', 'prop_c', 'prop_d', 'prop_e', 'prop_f', temporal_schema=TEMPORAL_SCHEMA)
-class SimpleConcreteChildTemporalTable(temporal_sqlalchemy.Clocked, SimpleAbstractConcreteBaseTable, Base):
+@temporal_sqlalchemy.add_clock(
+    'prop_a', 'prop_b', 'prop_c', 'prop_d', 'prop_e', 'prop_f',
+    temporal_schema=TEMPORAL_SCHEMA)
+class SimpleConcreteChildTemporalTable(
+        temporal_sqlalchemy.Clocked, SimpleAbstractConcreteBaseTable, Base):
     __tablename__ = 'simple_concrete_child_a_temporal'
     __table_args__ = {'schema': SCHEMA}
 
@@ -71,7 +77,9 @@ class SimpleConcreteChildTemporalTable(temporal_sqlalchemy.Clocked, SimpleAbstra
     __mapper_args__ = {'polymorphic_identity': 'child_a', 'concrete': True}
 
 
-@temporal_sqlalchemy.add_clock('prop_a', 'prop_b', 'prop_default', 'prop_callable', 'prop_func', temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'prop_a', 'prop_b', 'prop_default', 'prop_callable', 'prop_func',
+    temporal_schema=TEMPORAL_SCHEMA)
 class TemporalTableWithDefault(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'temporal_with_default'
     __table_args__ = {'schema': SCHEMA}
@@ -92,7 +100,8 @@ class RelatedTable(RelatedBase):
     prop_a = sa.Column(sa.Integer)
 
 
-@temporal_sqlalchemy.add_clock('prop_a', 'prop_b', 'rel_id', temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'prop_a', 'prop_b', 'rel_id', temporal_schema=TEMPORAL_SCHEMA)
 class RelationalTemporalModel(temporal_sqlalchemy.Clocked, RelatedBase):
     __tablename__ = 'relational_temporal'
     __table_args__ = {'schema': SCHEMA}
@@ -111,10 +120,12 @@ class Activity(temporal_sqlalchemy.TemporalActivityMixin, ActivityBase):
     id = auto_uuid()
     description = sa.Column(sap.TEXT)
     date_created = sa.Column(sa.DateTime(True), default=utcnow, nullable=False)
-    date_modified = sa.Column(sa.DateTime(True), default=utcnow, onupdate=utcnow, nullable=False)
+    date_modified = sa.Column(sa.DateTime(True), default=utcnow,
+                              onupdate=utcnow, nullable=False)
 
 
-@temporal_sqlalchemy.add_clock('column', activity_cls=Activity, temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'column', activity_cls=Activity, temporal_schema=TEMPORAL_SCHEMA)
 class FirstTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
     __tablename__ = 'temporal_with_activity_1'
     __table_args__ = {'schema': SCHEMA}
@@ -123,7 +134,8 @@ class FirstTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
     column = sa.Column(sa.Integer)
 
 
-@temporal_sqlalchemy.add_clock('column', activity_cls=Activity, temporal_schema=TEMPORAL_SCHEMA)
+@temporal_sqlalchemy.add_clock(
+    'column', activity_cls=Activity, temporal_schema=TEMPORAL_SCHEMA)
 class SecondTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
     __tablename__ = 'temporal_with_activity_2'
     __table_args__ = {'schema': SCHEMA}
@@ -143,10 +155,52 @@ class SimpleTable(RelatedBase):
     rel = orm.relationship(RelatedTable, info={'temporal_on': 'rel_id'})
 
 
-@temporal_sqlalchemy.add_clock('really_really_really_really_really_long_column')
+REALLY_REALLY = 'really_' * 5
+
+
+@temporal_sqlalchemy.add_clock(REALLY_REALLY + 'long_column')
 class HugeIndices(temporal_sqlalchemy.Clocked, EdgeCaseBase):
-    __tablename__ = 'testing_a_really_really_really_really_really_long_table_name'
+    __tablename__ = 'testing_a_' + REALLY_REALLY + 'long_table_name'
     __table_args__ = {'schema': SCHEMA}
 
     id = auto_uuid()
     really_really_really_really_really_long_column = sa.Column(sa.Integer)
+
+
+class JoinedEnumBase(Base):
+    __tablename__ = 'joined_enum_base'
+
+    id = auto_uuid()
+    kind = sa.Column(
+        sap.ENUM('default', 'enum_a', 'enum_b', name='joined_enum_kind'))
+    is_deleted = sa.Column(sa.Boolean, default=False)
+
+    __mapper_args__ = {
+        'polymorphic_on': kind,
+        'polymorphic_identity': 'default'
+    }
+
+
+@temporal_sqlalchemy.add_clock(
+    'val',
+    'is_deleted',
+    temporal_schema=TEMPORAL_SCHEMA)
+class JoinedEnumA(temporal_sqlalchemy.Clocked, JoinedEnumBase):
+    __tablename__ = 'joined_enum_a'
+
+    id = sa.Column(sa.ForeignKey(JoinedEnumBase.id), primary_key=True)
+    val = sa.Column(sap.ENUM('foo', 'foobar', name='joined_enum_a_val'))
+
+    __mapper_args__ = {'polymorphic_identity': 'enum_a'}
+
+
+@temporal_sqlalchemy.add_clock(
+    'val',
+    'is_deleted', temporal_schema=TEMPORAL_SCHEMA)
+class JoinedEnumB(temporal_sqlalchemy.Clocked, JoinedEnumBase):
+    __tablename__ = 'joined_enum_b'
+
+    id = sa.Column(sa.ForeignKey(JoinedEnumBase.id), primary_key=True)
+    val = sa.Column(sap.ENUM('bar', 'barfoo', name='joined_enum_b_val'))
+
+    __mapper_args__ = {'polymorphic_identity': 'enum_b'}

@@ -5,6 +5,7 @@ Here is an entirely incomplete list of amazing contributors.
     Alec Clowes <alec.clowes@cloverhealth.com>
     Ben Kudria <ben.kudria@cloverhealth.com>
     Dave Flerlage <dave.flerlage@cloverhealth.com>
+    Diego Argueta <diego.argueta@cloverhealth.com>
     George Leslie-Waksman <george@cloverhealth.com>
     Grant Wu <grant.wu@cloverhealth.com>
     Joey Leingang <joey.leingang@cloverhealth.com>

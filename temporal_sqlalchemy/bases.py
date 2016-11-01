@@ -1,9 +1,9 @@
 import abc
 import collections
 import contextlib
-import datetime
+import datetime as dt
 import typing
-import uuid
+import uuid  # noqa: F401
 
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
@@ -14,14 +14,16 @@ from temporal_sqlalchemy import nine
 
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
-T_PROPS = typing.TypeVar('T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
+T_PROPS = typing.TypeVar(
+    'T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
 
 
 class EntityClock(object):
     entity_id = None  # type: typing.Union[int, uuid.UUID]
 
     tick = sa.Column(sa.Integer, primary_key=True, autoincrement=False)
-    timestamp = sa.Column(sa.DateTime(True), server_default=sa.func.current_timestamp())
+    timestamp = sa.Column(sa.DateTime(True),
+                          server_default=sa.func.current_timestamp())
 
 
 class TemporalProperty(object):
@@ -40,11 +42,12 @@ class TemporalActivityMixin(object):
 
 
 class ClockedOption(object):
-    def __init__(self,
-                 history_tables: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
-                 temporal_props: typing.Iterable[T_PROPS],
-                 clock_table: nine.Type[EntityClock],
-                 activity_cls: nine.Type[TemporalActivityMixin] = None):
+    def __init__(
+            self,
+            history_tables: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
+            temporal_props: typing.Iterable[T_PROPS],
+            clock_table: nine.Type[EntityClock],
+            activity_cls: nine.Type[TemporalActivityMixin] = None):
         self.history_tables = history_tables
         self.temporal_props = temporal_props
 
@@ -52,23 +55,30 @@ class ClockedOption(object):
         self.activity_cls = activity_cls
 
     @staticmethod
-    def make_clock(effective_lower: datetime.datetime, vclock_lower: int, **kwargs) -> _ClockSet:
+    def make_clock(effective_lower: dt.datetime,
+                   vclock_lower: int,
+                   **kwargs) -> _ClockSet:
         """construct a clock set tuple"""
         effective_upper = kwargs.get('effective_upper', None)
         vclock_upper = kwargs.get('vclock_upper', None)
 
-        effective = psql_extras.DateTimeTZRange(effective_lower, effective_upper)
+        effective = psql_extras.DateTimeTZRange(
+            effective_lower, effective_upper)
         vclock = psql_extras.NumericRange(vclock_lower, vclock_upper)
 
         return _ClockSet(effective, vclock)
 
-    def record_history(self, clocked: 'Clocked', session: orm.Session, timestamp: datetime.datetime):
+    def record_history(self,
+                       clocked: 'Clocked',
+                       session: orm.Session,
+                       timestamp: dt.datetime):
         """record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
         try:
-            new_tick = state.dict['vclock']  # pylint: disable=no-member
+            new_tick = state.dict['vclock']
         except KeyError:
-            new_tick = getattr(clocked, 'vclock')  # TODO understand why this is necessary
+            # TODO understand why this is necessary
+            new_tick = getattr(clocked, 'vclock')
 
         new_clock = self.make_clock(timestamp, new_tick)
         attr = {'entity': clocked}
@@ -76,18 +86,20 @@ class ClockedOption(object):
         for prop, cls in self.history_tables.items():
             hist = attr.copy()
             # fires a load on any deferred columns
-            if prop.key not in state.dict:  # pylint: disable=no-member
+            if prop.key not in state.dict:
                 getattr(clocked, prop.key)
 
             if isinstance(prop, orm.RelationshipProperty):
-                changes = attributes.get_history(clocked, prop.key, passive=attributes.PASSIVE_NO_INITIALIZE)
-
+                changes = attributes.get_history(
+                    clocked, prop.key,
+                    passive=attributes.PASSIVE_NO_INITIALIZE)
             else:
                 changes = attributes.get_history(clocked, prop.key)
 
             if changes.added:
                 # Cap previous history row if exists
-                if sa.inspect(clocked).identity is not None:  # but only if it already exists!!
+                if sa.inspect(clocked).identity is not None:
+                    # but only if it already exists!!
                     effective_close = sa.func.tstzrange(
                         sa.func.lower(cls.effective),
                         new_clock.effective.lower,
@@ -97,7 +109,8 @@ class ClockedOption(object):
                         new_clock.vclock.lower,
                         '[)')
 
-                    history_query = getattr(clocked, cls.entity.property.backref[0])
+                    history_query = getattr(
+                        clocked, cls.entity.property.backref[0])
                     history_query.filter(
                         sa.and_(
                             sa.func.upper_inf(cls.effective),
@@ -118,7 +131,8 @@ class ClockedOption(object):
 
 
 class Clocked(object):
-    """Clocked Mixin gives you the default implementations of working with clocked data
+    """Clocked Mixin gives you the default implementations for working
+    with clocked data
 
     use with add_clock to make your model temporal:
 
@@ -152,7 +166,7 @@ class Clocked(object):
 
     @contextlib.contextmanager
     def clock_tick(self, activity: TemporalActivityMixin = None):
-        """ context manager that increments vclock by 1, scopes all changes to session """
+        """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
             raise ValueError("activity is missing on edit") from None
 
@@ -163,7 +177,8 @@ class Clocked(object):
         if session.is_modified(self):
             self.vclock += 1
 
-            new_clock_tick = self.temporal_options.clock_table(entity=self, tick=self.vclock)
+            new_clock_tick = self.temporal_options.clock_table(
+                entity=self, tick=self.vclock)
             if activity is not None:
                 new_clock_tick.activity = activity
 

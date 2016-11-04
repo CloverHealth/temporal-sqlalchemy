@@ -2,7 +2,6 @@ import abc
 import collections
 import contextlib
 import datetime as dt
-import typing
 
 import psycopg2.extras as psql_extras
 import six
@@ -13,8 +12,7 @@ import sqlalchemy.orm.attributes as attributes
 
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
-T_PROPS = typing.TypeVar(
-    'T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
+# T_PROPS = TypeVar('T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
 
 
 class EntityClock(object):

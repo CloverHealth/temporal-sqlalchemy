@@ -2,6 +2,8 @@ import datetime as dt
 import uuid
 import typing
 
+import six
+import psycopg2.extras as psql_extras
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as sap
 import sqlalchemy.event as event
@@ -9,7 +11,6 @@ import sqlalchemy.ext.declarative as declarative
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
 import sqlalchemy.util as util
-import psycopg2.extras as psql_extras
 
 from temporal_sqlalchemy import nine
 from temporal_sqlalchemy.bases import (
@@ -82,8 +83,8 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
             try:
                 initial_clock_tick.activity = kwargs.pop('activity')
             except KeyError as e:
-                raise ValueError(
-                    "activity is missing on create (%s)" % e) from None
+                six.raise_from(ValueError("activity is missing on create (%s)" % e),
+                               None)
 
         clocked.clock = [initial_clock_tick]
 

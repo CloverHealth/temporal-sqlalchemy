@@ -49,16 +49,16 @@ def get_history_model(target):
 
 
 # TODO kwargs to override default clock table and history tables prefix
-def add_clock(*props, **kwargs):
+def add_clock(*props, **options):
     # type: (Iterable[str], Type[TemporalActivityMixin]=None, str) -> None
     """Decorator to add clock and history to an orm model."""
     # Python 2.x doesn't support named keyword arguments so we have to emulate
     # this ourselves.
-    activity_cls = kwargs.pop('activity_cls', None)
-    temporal_schema = kwargs.pop('temporal_schema', None)
-    if kwargs:
+    activity_cls = options.pop('activity_cls', None)
+    temporal_schema = options.pop('temporal_schema', None)
+    if options:
         raise TypeError('Unexpected keyword arguments: %s' %
-                        ', '.join(repr(k) for k in kwargs))
+                        ', '.join(repr(k) for k in options))
 
     def init_clock(clocked, args, kwargs):
         # type: (Clocked, ..., Dict) -> None

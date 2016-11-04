@@ -11,7 +11,6 @@ import sqlalchemy as sa
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
 
-from temporal_sqlalchemy import nine
 
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
@@ -20,7 +19,7 @@ T_PROPS = typing.TypeVar(
 
 
 class EntityClock(object):
-    entity_id = None  # type: typing.Union[int, uuid.UUID]
+    entity_id = None  # type: Union[int, uuid.UUID]
 
     tick = sa.Column(sa.Integer, primary_key=True, autoincrement=False)
     timestamp = sa.Column(sa.DateTime(True),
@@ -29,11 +28,11 @@ class EntityClock(object):
 
 class TemporalProperty(object):
     """mixin when constructing a property history table"""
-    __table__ = None  # type: sa.Table
-    entity_id = None  # type: orm.ColumnProperty
-    entity = None  # type: orm.RelationshipProperty
-    effective = None  # type: psql_extras.DateTimeRange
-    vclock = None  # type: psql_extras.NumericRange
+    __table__ = None    # type: sa.Table
+    entity_id = None    # type: orm.ColumnProperty
+    entity = None       # type: orm.RelationshipProperty
+    effective = None    # type: psql_extras.DateTimeRange
+    vclock = None       # type: psql_extras.NumericRange
 
 
 class TemporalActivityMixin(object):
@@ -45,10 +44,10 @@ class TemporalActivityMixin(object):
 class ClockedOption(object):
     def __init__(
             self,
-            history_tables: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
-            temporal_props: typing.Iterable[T_PROPS],
-            clock_table: nine.Type[EntityClock],
-            activity_cls: nine.Type[TemporalActivityMixin] = None):
+            history_tables,         # type: Dict[T_PROPS, Type[TemporalProperty]]
+            temporal_props,         # type: Iterable[T_PROPS]
+            clock_table,            # type: Type[EntityClock]
+            activity_cls=None):     # type: Type[TemporalActivityMixin] = None
         self.history_tables = history_tables
         self.temporal_props = temporal_props
 
@@ -56,10 +55,11 @@ class ClockedOption(object):
         self.activity_cls = activity_cls
 
     @staticmethod
-    def make_clock(effective_lower: dt.datetime,
-                   vclock_lower: int,
-                   **kwargs) -> _ClockSet:
-        """construct a clock set tuple"""
+    def make_clock(effective_lower,  # type: dt.datetime
+                   vclock_lower,     # type: int
+                   **kwargs):
+        # type: (...) -> _ClockSet
+        """Construct a clock set tuple"""
         effective_upper = kwargs.get('effective_upper', None)
         vclock_upper = kwargs.get('vclock_upper', None)
 
@@ -70,10 +70,10 @@ class ClockedOption(object):
         return _ClockSet(effective, vclock)
 
     def record_history(self,
-                       clocked: 'Clocked',
-                       session: orm.Session,
-                       timestamp: dt.datetime):
-        """record all history for a given clocked object"""
+                       clocked,     # type: Clocked
+                       session,     # type: orm.Session
+                       timestamp):  # type: dt.datetime
+        """Record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
         try:
             new_tick = state.dict['vclock']
@@ -156,8 +156,8 @@ class Clocked(object):
 
     clock = None  # type: orm.relationship
     temporal_options = None  # type: ClockedOption
-    first_tick = None  # type:  EntityClock
-    latest_tick = None  # type:  EntityClock
+    first_tick = None   # type: EntityClock
+    latest_tick = None  # type: EntityClock
 
     @property
     def date_created(self):
@@ -168,7 +168,7 @@ class Clocked(object):
         return self.latest_tick.timestamp
 
     @contextlib.contextmanager
-    def clock_tick(self, activity: TemporalActivityMixin = None):
+    def clock_tick(self, activity=None):    # type: TemporalActivityMixin
         """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
             six.raise_from(ValueError("activity is missing on edit"), None)

@@ -1,0 +1,4 @@
+0.3.0:
+    - Various modifications to make the library compatible with Python 2.7+
+    - Peg pytest to >= 3.0.
+

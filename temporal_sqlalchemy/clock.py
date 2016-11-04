@@ -12,7 +12,6 @@ import sqlalchemy.orm.attributes as attributes
 import sqlalchemy.util as util
 
 from temporal_sqlalchemy.bases import (
-    T_PROPS,
     Clocked,
     ClockedOption,
     TemporalActivityMixin,
@@ -21,15 +20,13 @@ from temporal_sqlalchemy.bases import (
 
 
 def effective_now():
-    # type: (...) -> psql_extras.DateTimeTZRange
+    # type: () -> psql_extras.DateTimeTZRange
     utc_now = dt.datetime.now(tz=dt.timezone.utc)
     return psql_extras.DateTimeTZRange(utc_now, None)
 
 
-def get_activity_clock_backref(
-        activity,   # type: TemporalActivityMixin
-        entity):    # type: Clocked
-    # type: (...) -> orm.RelationshipProperty
+def get_activity_clock_backref(activity, entity):
+    # type: (TemporalActivityMixin, Clocked) -> orm.RelationshipProperty
     """Get the backref'd clock history for a given entity."""
     assert (
         activity is entity.temporal_options.activity_cls or
@@ -42,8 +39,8 @@ def get_activity_clock_backref(
     return inspected.relationships[backref]
 
 
-def get_history_model(target):  # type: attributes.InstrumentedAttribute
-    # type: (...) -> TemporalProperty
+def get_history_model(target):
+    # type: (attributes.InstrumentedAttribute) -> TemporalProperty
     """Get the history model for given entity class."""
     assert issubclass(target.class_, Clocked)
 
@@ -51,9 +48,8 @@ def get_history_model(target):  # type: attributes.InstrumentedAttribute
 
 
 # TODO kwargs to override default clock table and history tables prefix
-def add_clock(*props,               # type: Iterable[str]
-              activity_cls=None,    # type: Type[TemporalActivityMixin] = None
-              temporal_schema=None):    # type: str
+def add_clock(*props, activity_cls=None, temporal_schema=None):
+    # type: (Iterable[str], Type[TemporalActivityMixin]=None, str) -> None
     """Decorator to add clock and history to an orm model."""
 
     def init_clock(clocked: Clocked, args, kwargs):
@@ -88,7 +84,8 @@ def add_clock(*props,               # type: Iterable[str]
 
         clocked.clock = [initial_clock_tick]
 
-    def make_temporal(cls):     # type: Type[Clocked]
+    def make_temporal(cls):
+        # type: (Type[Clocked]) -> None
         assert issubclass(cls, Clocked), "add temporal.Clocked to %r" % cls
         mapper = cls.__mapper__
 
@@ -187,8 +184,8 @@ def add_clock(*props,               # type: Iterable[str]
     return make_temporal
 
 
-def _copy_column(column):   # type: sa.Column
-    # type: (...) -> sa.Column
+def _copy_column(column):
+    # type: (sa.Column) -> sa.Column
     """copy a column, set some properties on it for history table creation"""
     original = column
     new = column.copy()
@@ -201,8 +198,8 @@ def _copy_column(column):   # type: sa.Column
     return new
 
 
-def _truncate_identifier(identifier):   # type: str
-    # type: (...) -> str
+def _truncate_identifier(identifier):
+    # type: (str) -> str
     """ensure identifier doesn't exceed max characters postgres allows"""
     max_len = (sap.dialect.max_index_name_length
                or sap.dialect.max_identifier_length)
@@ -212,11 +209,8 @@ def _truncate_identifier(identifier):   # type: str
     return identifier
 
 
-def build_clock_class(
-        name,       # type: str
-        metadata,   # type: sa.MetaData
-        props):     # type: Dict):
-    # type: (...) -> Type[EntityClock]
+def build_clock_class(name, metadata, props):
+    # type: (str, sa.MetaData, Dict) -> Type[EntityClock]
     base_classes = (
         EntityClock,
         declarative.declarative_base(metadata=metadata),
@@ -224,11 +218,8 @@ def build_clock_class(
     return type('%sClock' % name, base_classes, props)
 
 
-def build_history_class(
-        cls,    # type: declarative.DeclarativeMeta
-        prop,   # type: T_PROPS
-        schema=None):   # type: str
-    # type: (...) -> Type[TemporalProperty]
+def build_history_class(cls, prop, schema=None):
+    # type: (declarative.DeclarativeMeta, T_PROPS, str) -> Type[TemporalProperty]
     """build a sql alchemy table for given prop"""
     class_name = "%s%s_%s" % (cls.__name__, 'History', prop.key)
     table = build_history_table(cls, prop, schema)
@@ -257,11 +248,8 @@ def build_history_class(
     return model
 
 
-def build_history_table(
-        cls,    # type: declarative.DeclarativeMeta
-        prop,   # type: T_PROPS,
-        schema=None):   # type: str
-    # type: (...) -> sa.Table
+def build_history_table(cls, prop, schema=None):
+    # type: (declarative.DeclarativeMeta, T_PROPS, str) -> sa.Table
     """build a sql alchemy table for given prop"""
 
     if isinstance(prop, orm.RelationshipProperty):

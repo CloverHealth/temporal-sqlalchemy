@@ -54,10 +54,8 @@ class ClockedOption(object):
         self.activity_cls = activity_cls
 
     @staticmethod
-    def make_clock(effective_lower,  # type: dt.datetime
-                   vclock_lower,     # type: int
-                   **kwargs):
-        # type: (...) -> _ClockSet
+    def make_clock(effective_lower, vclock_lower, **kwargs):
+        # type: (dt.datetime, int) -> _ClockSet
         """Construct a clock set tuple"""
         effective_upper = kwargs.get('effective_upper', None)
         vclock_upper = kwargs.get('vclock_upper', None)
@@ -68,10 +66,8 @@ class ClockedOption(object):
 
         return _ClockSet(effective, vclock)
 
-    def record_history(self,
-                       clocked,     # type: Clocked
-                       session,     # type: orm.Session
-                       timestamp):  # type: dt.datetime
+    def record_history(self, clocked, session, timestamp):
+        # type: (Clocked, orm.Session, dt.datetime) -> None
         """Record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
         try:
@@ -167,7 +163,8 @@ class Clocked(object):
         return self.latest_tick.timestamp
 
     @contextlib.contextmanager
-    def clock_tick(self, activity=None):    # type: TemporalActivityMixin
+    def clock_tick(self, activity=None):
+        # type: (TemporalActivityMixin) -> None
         """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
             six.raise_from(ValueError("activity is missing on edit"), None)

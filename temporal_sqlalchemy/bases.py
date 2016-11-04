@@ -5,10 +5,11 @@ import datetime as dt
 import typing
 import uuid  # noqa: F401
 
+import psycopg2.extras as psql_extras
+import six
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
-import psycopg2.extras as psql_extras
 
 from temporal_sqlalchemy import nine
 
@@ -126,9 +127,9 @@ class ClockedOption(object):
                 # Add new history row
                 hist[prop.key] = changes.added[0]
                 session.add(
-                    cls(**hist,
-                        vclock=new_clock.vclock,
-                        effective=new_clock.effective)
+                    cls(vclock=new_clock.vclock,
+                        effective=new_clock.effective,
+                        **hist)
                 )
 
 
@@ -170,7 +171,7 @@ class Clocked(object):
     def clock_tick(self, activity: TemporalActivityMixin = None):
         """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
-            raise ValueError("activity is missing on edit") from None
+            six.raise_from(ValueError("activity is missing on edit"), None)
 
         session = orm.object_session(self)
         with session.no_autoflush:

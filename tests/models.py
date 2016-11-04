@@ -1,5 +1,6 @@
 import datetime
 
+import pytz
 import sqlalchemy as sa
 import sqlalchemy.ext.mutable as mutable
 import sqlalchemy.orm as orm
@@ -31,8 +32,9 @@ def auto_uuid():
                      primary_key=True, server_default=uuid_gen_expr)
 
 
-def utcnow() -> datetime.datetime:
-    return datetime.datetime.now(datetime.timezone.utc)
+def utcnow():
+    # type: () -> datetime.datetime
+    return datetime.datetime.now(pytz.utc)
 
 
 @temporal_sqlalchemy.add_clock(

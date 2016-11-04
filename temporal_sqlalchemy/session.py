@@ -1,6 +1,7 @@
 import datetime
 import itertools
 
+import pytz
 import sqlalchemy.event as event
 import sqlalchemy.orm as orm
 
@@ -19,7 +20,7 @@ def persist_history(session, flush_context, instances):
     if any(_temporal_models(session.deleted)):
         raise ValueError("Cannot delete temporal objects.")
 
-    correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+    correlate_timestamp = datetime.datetime.now(tz=pytz.utc)
     for obj in _temporal_models(itertools.chain(session.dirty, session.new)):
         obj.temporal_options.record_history(obj, session, correlate_timestamp)
 

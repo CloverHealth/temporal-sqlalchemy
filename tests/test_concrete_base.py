@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+import pytz
 import psycopg2.extras as psql_extras
 import sqlalchemy as sa
 
@@ -55,8 +56,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         t = models.SimpleConcreteChildTemporalTable(
                 prop_a=1,
                 prop_b='foo',
-                prop_c=datetime.datetime(2016, 5, 11, 1, 2, 3,
-                                         tzinfo=datetime.timezone.utc))
+                prop_c=datetime.datetime(2016, 5, 11, 1, 2, 3, tzinfo=pytz.utc))
         assert t.clock.count() == 1
 
         session.add(t)
@@ -98,8 +98,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         t = models.SimpleConcreteChildTemporalTable(
             prop_a=1,
             prop_b='foo',
-            prop_c=datetime.datetime(2016, 5, 11, 1, 2, 3,
-                                     tzinfo=datetime.timezone.utc),
+            prop_c=datetime.datetime(2016, 5, 11, 1, 2, 3, tzinfo=pytz.utc),
             prop_d={'foo': 'old value'},
             prop_e=psql_extras.DateRange(datetime.date(2016, 1, 1),
                                          datetime.date(2016, 1, 10)),
@@ -112,7 +111,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         with t.clock_tick():
             t.prop_a = 2
             t.prop_b = 'bar'
-            t.prop_c = datetime.datetime.now(tz=datetime.timezone.utc)
+            t.prop_c = datetime.datetime.now(tz=pytz.utc)
             t.prop_d['foo'] = 'new value'
             t.prop_e = psql_extras.DateRange(datetime.date(2016, 2, 1),
                                              datetime.date(2016, 2, 10))
@@ -256,16 +255,14 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         t = models.SimpleConcreteChildTemporalTable(
             prop_a=1,
             prop_b='foo',
-            prop_c=datetime.datetime(2016, 5, 11,
-                                     tzinfo=datetime.timezone.utc))
+            prop_c=datetime.datetime(2016, 5, 11, tzinfo=pytz.utc))
 
         session.add(t)
         session.commit()
 
         with t.clock_tick():
             t.prop_a = 1
-            t.prop_c = datetime.datetime(2016, 5, 11,
-                                         tzinfo=datetime.timezone.utc)
+            t.prop_c = datetime.datetime(2016, 5, 11, tzinfo=pytz.utc)
 
         session.commit()
 

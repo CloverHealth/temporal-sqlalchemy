@@ -1,4 +1,5 @@
 import datetime as dt
+import itertools
 import uuid
 
 import six
@@ -296,7 +297,6 @@ def build_history_table(cls, prop, schema=None):
                   default=effective_now, nullable=False),
         sa.Column('vclock', sap.INT4RANGE, nullable=False),
         sa.Column('entity_id', sa.ForeignKey(foreign_key)),
-        *columns,
-        *constraints,
+        *itertools.chain(columns, constraints),
         schema=schema or local_table.schema,
         keep_existing=True)  # memoization ftw

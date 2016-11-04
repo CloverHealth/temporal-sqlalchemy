@@ -3,8 +3,8 @@
 import sys
 import setuptools
 
-if sys.version_info < (3, 5):
-    raise Exception('Python version < 3.5 are not supported.')
+if sys.version_info < (3, 3):
+    raise Exception('Python version < 3.3 are not supported.')
 
 # Get version information without importing the package
 __version__ = None
@@ -20,7 +20,7 @@ CLASSIFIERS = [
     'Intended Audience :: Healthcare Industry',
     'License :: OSI Approved :: BSD License',
     'Operating System :: OS Independent',
-    'Programming Language :: Python :: 2.7',
+    # 'Programming Language :: Python :: 2.7', Not yet
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',

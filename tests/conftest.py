@@ -43,7 +43,8 @@ def sessionmaker():
 
 
 @pytest.yield_fixture()
-def session(connection: sa.engine.Connection, sessionmaker: orm.sessionmaker):
+def session(connection,     # type: sa.engine.Connection
+            sessionmaker):  # type: orm.sessionmaker
     transaction = connection.begin()
     sess = sessionmaker(bind=connection)
 

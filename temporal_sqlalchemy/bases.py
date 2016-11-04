@@ -3,7 +3,6 @@ import collections
 import contextlib
 import datetime as dt
 import typing
-import uuid  # noqa: F401
 
 import psycopg2.extras as psql_extras
 import six

@@ -6,7 +6,7 @@ import testing.postgresql
 import temporal_sqlalchemy as temporal
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def engine():
     db = testing.postgresql.Postgresql()
 
@@ -18,7 +18,7 @@ def engine():
     db.stop()
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def connection(engine):
     """Session-wide test database."""
     conn = engine.connect()
@@ -33,7 +33,7 @@ def connection(engine):
     conn.close()
 
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def sessionmaker():
     Session = orm.sessionmaker()
 
@@ -42,8 +42,9 @@ def sessionmaker():
     Session.close_all()
 
 
-@pytest.yield_fixture()
-def session(connection: sa.engine.Connection, sessionmaker: orm.sessionmaker):
+@pytest.fixture
+def session(connection, sessionmaker):
+    # type: (sa.engine.Connection, orm.sessionmaker)
     transaction = connection.begin()
     sess = sessionmaker(bind=connection)
 

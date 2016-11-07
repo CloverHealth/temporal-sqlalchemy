@@ -1,6 +1,7 @@
 Thanks for downloading temporal-sqlalchemy.
 
-To install it, make sure you have Python 3.5 or greater installed. Then run
-this command from the command prompt:
+To install it, make sure you have Python 2.7 or >= 3.3 installed. Then run this
+command from the command prompt:
 
-    python setup.py install
+    python setup.py install     # Python 2.x
+    python3 setup.py install    # Python 3.x

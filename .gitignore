@@ -13,6 +13,7 @@ __pycache__/
 /tests/.coverage
 /tests/htmlcov/
 .cache/
+.coverage
 
 # cache
 /.eggs/

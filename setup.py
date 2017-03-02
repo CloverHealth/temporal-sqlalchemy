@@ -19,7 +19,7 @@ if sys.version_info < (3, 5):
 TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
 SETUP_DEPENDENCIES = []
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
-    SETUP_DEPENDENCIES.append('pytest-runner>=2.11.1')
+    SETUP_DEPENDENCIES.append('pytest-runner')
 
 CLASSIFIERS = [
     'Development Status :: 4 - Beta',

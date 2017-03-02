@@ -126,9 +126,7 @@ class ClockedOption(object):
                 # Add new history row
                 hist[prop.key] = changes.added[0]
                 session.add(
-                    cls(**hist,
-                        vclock=new_clock.vclock,
-                        effective=new_clock.effective)
+                    cls(vclock=new_clock.vclock, effective=new_clock.effective, **hist)
                 )
 
 

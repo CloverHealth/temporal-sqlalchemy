@@ -4,11 +4,6 @@ machine:
     # Watch for official support here: https://circleci.com/docs/build-image-trusty/
     version: 3.5.1
 
-dependencies:
-  pre:
-    - pip install -U pip
-    - python setup.py develop
-
 test:
   override:
     - python setup.py test

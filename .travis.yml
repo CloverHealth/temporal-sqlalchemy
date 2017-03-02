@@ -1,0 +1,36 @@
+# necessary until containers support postgres 9.5
+sudo: required
+dist: trusty
+
+language: python
+
+matrix:
+  include:
+    - python: 3.5.2
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.5.2
+      addons:
+        postgresql: 9.4
+      env: PG=9.4
+    - python: 3.5.2
+      addons:
+        postgresql: 9.3
+      env: PG=9.3
+    - python: 3.5.0
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.4
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.3
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+
+script: python setup.py test
+
+after_script: coveralls

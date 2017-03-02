@@ -3,8 +3,8 @@
 import sys
 import setuptools
 
-if sys.version_info < (3, 5):
-    raise Exception('Python version < 3.5 are not supported.')
+if sys.version_info < (3, 3):
+    raise Exception('Python version < 3.3 are not supported.')
 
 # Get version information without importing the package
 __version__ = None
@@ -12,6 +12,14 @@ exec(open('temporal_sqlalchemy/version.py', 'r').read())
 
 SHORT_DESCRIPTION = 'Temporal Extensions for SQLAlchemy ORM'
 LONG_DESCRIPTION = open('README.rst', 'r').read()
+
+DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
+if sys.version_info < (3, 5):
+    DEPENDENCIES.append('typing>=3.5.2,<4.0.0')
+TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
+SETUP_DEPENDENCIES = []
+if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
+    SETUP_DEPENDENCIES.append('pytest-runner')
 
 CLASSIFIERS = [
     'Development Status :: 4 - Beta',
@@ -21,20 +29,15 @@ CLASSIFIERS = [
     'License :: OSI Approved :: BSD License',
     'Operating System :: OS Independent',
     'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.3',
+    'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
     'Topic :: Database',
     'Topic :: Database :: Front-Ends',
     'Topic :: Software Development',
     'Topic :: Software Development :: Libraries',
     'Topic :: Software Development :: Libraries :: Python Modules',
 ]
-
-DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
-TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
-SETUP_DEPENDENCIES = []
-if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
-    SETUP_DEPENDENCIES.append('pytest-runner')
 
 
 setuptools.setup(

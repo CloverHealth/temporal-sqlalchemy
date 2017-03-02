@@ -1,4 +1,5 @@
 import datetime as dt
+import itertools
 import uuid
 import typing
 
@@ -291,18 +292,12 @@ def build_history_table(
         ),
     ]
 
-    # TODO: make this support different shape pks
-    foreign_key = getattr(cls, 'id')
-    return sa.Table(
-        table_name,
-        prop.parent.class_.metadata,
-        sa.Column('id', sap.UUID(as_uuid=True),
-                  default=uuid.uuid4, primary_key=True),
-        sa.Column('effective', sap.TSTZRANGE,
-                  default=effective_now, nullable=False),
-        sa.Column('vclock', sap.INT4RANGE, nullable=False),
-        sa.Column('entity_id', sa.ForeignKey(foreign_key)),
-        *columns,
-        *constraints,
-        schema=schema or local_table.schema,
-        keep_existing=True)  # memoization ftw
+    foreign_key = getattr(prop.parent.class_, 'id')  # TODO make this support different shape pks
+    return sa.Table(table_name, prop.parent.class_.metadata,
+                    sa.Column('id', sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True),
+                    sa.Column('effective', sap.TSTZRANGE, default=effective_now, nullable=False),
+                    sa.Column('vclock', sap.INT4RANGE, nullable=False),
+                    sa.Column('entity_id', sa.ForeignKey(foreign_key)),
+                    *itertools.chain(columns, constraints),
+                    schema=schema or local_table.schema,
+                    keep_existing=True)  # memoization ftw

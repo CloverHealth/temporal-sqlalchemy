@@ -31,10 +31,6 @@ matrix:
         postgresql: 9.5
       env: PG=9.5
 
-before_install: pip install -U pip
-
-install: python setup.py develop
-
 script: python setup.py test
 
 after_script: coveralls

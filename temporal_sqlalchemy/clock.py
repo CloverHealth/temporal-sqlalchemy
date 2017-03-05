@@ -122,7 +122,7 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
         entity_table = mapper.local_table
         entity_table_name = entity_table.name
         schema = temporal_schema or entity_table.schema
-        clock_table_name = _truncate_identifier("%s_clock" % entity_table_name)
+        clock_table_name = truncate_identifier("%s_clock" % entity_table_name)
 
         history_tables = {
             p: build_history_class(cls, p, schema)
@@ -200,7 +200,7 @@ def _copy_column(column: sa.Column) -> sa.Column:
     return new
 
 
-def _truncate_identifier(identifier: str) -> str:
+def truncate_identifier(identifier: str) -> str:
     """ensure identifier doesn't exceed max characters postgres allows"""
     max_len = (sap.dialect.max_index_name_length
                or sap.dialect.max_identifier_length)
@@ -272,12 +272,12 @@ def build_history_table(
         columns = (_copy_column(col) for col in prop.columns)
 
     local_table = cls.__table__
-    table_name = _truncate_identifier(
+    table_name = truncate_identifier(
         '%s_%s_%s' % (local_table.name, 'history', property_key))
-    index_name = _truncate_identifier('%s_effective_idx' % table_name)
-    effective_exclude_name = _truncate_identifier(
+    index_name = truncate_identifier('%s_effective_idx' % table_name)
+    effective_exclude_name = truncate_identifier(
         '%s_excl_effective' % table_name)
-    vclock_exclude_name = _truncate_identifier('%s_excl_vclock' % table_name)
+    vclock_exclude_name = truncate_identifier('%s_excl_vclock' % table_name)
     constraints = [
         sa.Index(index_name, 'effective', postgresql_using='gist'),
         sap.ExcludeConstraint(

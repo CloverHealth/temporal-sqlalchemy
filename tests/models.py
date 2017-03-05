@@ -204,3 +204,20 @@ class JoinedEnumB(temporal_sqlalchemy.Clocked, JoinedEnumBase):
     val = sa.Column(sap.ENUM('bar', 'barfoo', name='joined_enum_b_val'))
 
     __mapper_args__ = {'polymorphic_identity': 'enum_b'}
+
+
+class NewStyleModel(ActivityBase, temporal_sqlalchemy.TemporalModel):
+    __tablename__ = 'new_style_temporal_model'
+    __table_args__ = {'schema': SCHEMA}
+
+    id = auto_uuid()
+    description = sa.Column(sa.TEXT)
+
+    int_prop = sa.Column(sa.Integer)
+    bool_prop = sa.Column(sa.Boolean)
+    datetime_prop = sa.Column(sa.DateTime(True))
+
+    class Temporal:
+        activity_class = Activity
+        track = ('description', 'int_prop', 'bool_prop', 'datetime_prop')
+        schema = TEMPORAL_SCHEMA

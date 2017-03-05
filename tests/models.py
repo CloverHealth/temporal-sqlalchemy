@@ -13,15 +13,11 @@ TEMPORAL_SCHEMA = 'temporal_history'
 
 basic_metadata = sa.MetaData()
 expected_fail_metadata = sa.MetaData()
-activity_metadata = sa.MetaData()
-related_metadata = sa.MetaData()
 edgecase_metadata = sa.MetaData()
 
 Base = sa_decl.declarative_base(metadata=basic_metadata)
 EdgeCaseBase = sa_decl.declarative_base(metadata=edgecase_metadata)
 ExpectedFailBase = sa_decl.declarative_base(metadata=expected_fail_metadata)
-ActivityBase = sa_decl.declarative_base(metadata=activity_metadata)
-RelatedBase = sa_decl.declarative_base(metadata=related_metadata)
 AbstractConcreteBase = sa_decl.AbstractConcreteBase
 
 
@@ -92,7 +88,7 @@ class TemporalTableWithDefault(temporal_sqlalchemy.Clocked, Base):
     prop_func = sa.Column(sa.DateTime, default=sa.func.now())
 
 
-class RelatedTable(RelatedBase):
+class RelatedTable(Base):
     __tablename__ = 'relational_related'
     __table_args__ = {'schema': SCHEMA}
 
@@ -102,7 +98,7 @@ class RelatedTable(RelatedBase):
 
 @temporal_sqlalchemy.add_clock(
     'prop_a', 'prop_b', 'rel_id', temporal_schema=TEMPORAL_SCHEMA)
-class RelationalTemporalModel(temporal_sqlalchemy.Clocked, RelatedBase):
+class RelationalTemporalModel(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'relational_temporal'
     __table_args__ = {'schema': SCHEMA}
 
@@ -113,7 +109,7 @@ class RelationalTemporalModel(temporal_sqlalchemy.Clocked, RelatedBase):
     rel = orm.relationship(RelatedTable, info={'temporal_on': 'rel_id'})
 
 
-class Activity(temporal_sqlalchemy.TemporalActivityMixin, ActivityBase):
+class Activity(temporal_sqlalchemy.TemporalActivityMixin, Base):
     __tablename__ = 'temp_activity_table'
     __table_args__ = {'schema': SCHEMA}
 
@@ -126,7 +122,7 @@ class Activity(temporal_sqlalchemy.TemporalActivityMixin, ActivityBase):
 
 @temporal_sqlalchemy.add_clock(
     'column', activity_cls=Activity, temporal_schema=TEMPORAL_SCHEMA)
-class FirstTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
+class FirstTemporalWithActivity(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'temporal_with_activity_1'
     __table_args__ = {'schema': SCHEMA}
 
@@ -136,7 +132,7 @@ class FirstTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
 
 @temporal_sqlalchemy.add_clock(
     'column', activity_cls=Activity, temporal_schema=TEMPORAL_SCHEMA)
-class SecondTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
+class SecondTemporalWithActivity(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'temporal_with_activity_2'
     __table_args__ = {'schema': SCHEMA}
 
@@ -144,7 +140,7 @@ class SecondTemporalWithActivity(temporal_sqlalchemy.Clocked, ActivityBase):
     column = sa.Column(sa.Integer)
 
 
-class SimpleTable(RelatedBase):
+class SimpleTable(Base):
     __tablename__ = 'simple_table'
     __table_args__ = {'schema': SCHEMA}
 
@@ -169,6 +165,7 @@ class HugeIndices(temporal_sqlalchemy.Clocked, EdgeCaseBase):
 
 class JoinedEnumBase(Base):
     __tablename__ = 'joined_enum_base'
+    __table_args__ = {'schema': SCHEMA}
 
     id = auto_uuid()
     kind = sa.Column(
@@ -206,7 +203,7 @@ class JoinedEnumB(temporal_sqlalchemy.Clocked, JoinedEnumBase):
     __mapper_args__ = {'polymorphic_identity': 'enum_b'}
 
 
-class NewStyleModel(ActivityBase, temporal_sqlalchemy.TemporalModel):
+class NewStyleModel(Base, temporal_sqlalchemy.TemporalModel):
     __tablename__ = 'new_style_temporal_model'
     __table_args__ = {'schema': SCHEMA}
 
@@ -220,4 +217,30 @@ class NewStyleModel(ActivityBase, temporal_sqlalchemy.TemporalModel):
     class Temporal:
         activity_class = Activity
         track = ('description', 'int_prop', 'bool_prop', 'datetime_prop')
+        schema = TEMPORAL_SCHEMA
+
+
+class NewStyleModelWithRelationship(Base, temporal_sqlalchemy.TemporalModel):
+    __tablename__ = 'new_style_temporal_model_with_relationship'
+    __table_args__ = {'schema': SCHEMA}
+
+    id = auto_uuid()
+    description = sa.Column(sa.TEXT)
+
+    int_prop = sa.Column(sa.Integer)
+    bool_prop = sa.Column(sa.Boolean)
+    datetime_prop = sa.Column(sa.DateTime(True))
+    rel_id = sa.Column(sa.ForeignKey(RelatedTable.id))
+    rel = orm.relationship(RelatedTable)
+
+    class Temporal:
+        activity_class = Activity
+        track = (
+            'description',
+            'int_prop',
+            'bool_prop',
+            'datetime_prop',
+            'rel_id',
+            'rel',
+        )
         schema = TEMPORAL_SCHEMA

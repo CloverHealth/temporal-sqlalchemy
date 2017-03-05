@@ -41,13 +41,13 @@ class TemporalModel(object):
     def temporal_map(mapper: orm.Mapper):
         cls = mapper.class_
         assert hasattr(cls, 'Temporal')
-        temporal_declaration = cls.Temporal
-        activity_class = getattr(temporal_declaration, 'activity_class', None)
-
-        tracked_props = frozenset(mapper.get_property(prop) for prop in cls.Temporal.track)
         entity_table = mapper.local_table
-        entity_table_name = entity_table.name
+        temporal_declaration = cls.Temporal
+        # get things defined on Temporal:
+        tracked_props = frozenset(mapper.get_property(prop) for prop in cls.Temporal.track)
+        activity_class = getattr(temporal_declaration, 'activity_class', None)
         schema = getattr(temporal_declaration, 'schema', entity_table.schema)
+
         clock_table = TemporalModel.build_clock_table(entity_table, cls.metadata, schema, activity_class)
         clock_properties = {
             'entity': orm.relationship(lambda: cls, backref=orm.backref('clock', lazy='dynamic')),
@@ -56,7 +56,7 @@ class TemporalModel(object):
 
         if activity_class:
             # create a relationship to the activity from the clock model
-            backref_name = '%s_clock' % entity_table_name
+            backref_name = '%s_clock' % entity_table.name
             clock_properties['activity'] = orm.relationship(lambda: activity_class, backref=backref_name)
 
         clock_model = clock.build_clock_class(cls.__name__, cls.metadata, clock_properties)
@@ -65,7 +65,7 @@ class TemporalModel(object):
             temporal_props=tracked_props,
             history_tables=None,
             clock_table=clock_model,
-            activity_cls=getattr(temporal_declaration, 'activity_class', None)
+            activity_cls=activity_class
         )
 
     @declarative.declared_attr

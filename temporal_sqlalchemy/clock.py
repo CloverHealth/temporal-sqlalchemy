@@ -1,4 +1,5 @@
 import datetime as dt
+import functools
 import itertools
 import uuid
 import typing
@@ -9,10 +10,10 @@ import sqlalchemy.event as event
 import sqlalchemy.ext.declarative as declarative
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
-import sqlalchemy.util as util
+import sqlalchemy.util as sa_util
 import psycopg2.extras as psql_extras
 
-from temporal_sqlalchemy import nine
+from temporal_sqlalchemy import nine, util
 from temporal_sqlalchemy.bases import (
     T_PROPS,
     Clocked,
@@ -192,8 +193,8 @@ def _copy_column(column: sa.Column) -> sa.Column:
     original = column
     new = column.copy()
     original.info['history_copy'] = new
-    if column.foreign_keys:
-        new.foreign_keys = column.foreign_keys
+    for fk in column.foreign_keys:
+        new.append_foreign_key(sa.ForeignKey(fk.target_fullname))
     new.unique = False
     new.default = new.server_default = None
 
@@ -206,7 +207,7 @@ def truncate_identifier(identifier: str) -> str:
                or sap.dialect.max_identifier_length)
     if len(identifier) > max_len:
         return "%s_%s" % (identifier[0:max_len - 8],
-                          util.md5_hex(identifier)[-4:])
+                          sa_util.md5_hex(identifier)[-4:])
     return identifier
 
 
@@ -225,32 +226,46 @@ def build_history_class(
         cls: declarative.DeclarativeMeta,
         prop: T_PROPS,
         schema: str = None) -> nine.Type[TemporalProperty]:
-    """build a sql alchemy table for given prop"""
+    """build a sqlalchemy model for given prop"""
     class_name = "%s%s_%s" % (cls.__name__, 'History', prop.key)
     table = build_history_table(cls, prop, schema)
     base_classes = (
         TemporalProperty,
-        declarative.declarative_base(metadata=cls.metadata),
+        declarative.declarative_base(metadata=table.metadata),
     )
     class_attrs = {
         '__table__': table,
         'entity': orm.relationship(
-            cls, backref=orm.backref('%s_history' % prop.key, lazy='dynamic')),
+            lambda: cls,
+            backref=orm.backref('%s_history' % prop.key, lazy='dynamic')
+        ),
     }
-    model = type(class_name, base_classes, class_attrs)
 
     if isinstance(prop, orm.RelationshipProperty):
-        mapper = sa.inspect(model)
-        join_cond = (getattr(model, prop.info['temporal_on'])
-                     == prop.argument.id)
-        rel = orm.relationship(
+        class_attrs[prop.key] = orm.relationship(
             prop.argument,
-            primaryjoin=join_cond,
-            # TODO: different shaped FKs
-            lazy="noload")  # write only rel
-        mapper.add_property(prop.key, rel)
+            lazy='noload')
 
+    model = type(class_name, base_classes, class_attrs)
     return model
+
+
+def _generate_history_table_name(local_table: sa.Table,
+                                 cols: typing.Iterable[sa.Column]) -> str:
+    base_name = '%s_history' % local_table.name
+    sort_col_names = sorted(col.key for col in cols)
+
+    return "%s_%s" % (base_name, "_".join(sort_col_names))
+
+
+@functools.singledispatch
+def _exclusion_in(type_, name) -> typing.Tuple:
+    return name, '='
+
+
+@_exclusion_in.register(sap.UUID)
+def _(type_, name):
+    return sa.cast(sa.text(name), sap.TEXT), '='
 
 
 def build_history_table(
@@ -258,46 +273,52 @@ def build_history_table(
         prop: T_PROPS,
         schema: str = None) -> sa.Table:
     """build a sql alchemy table for given prop"""
-
     if isinstance(prop, orm.RelationshipProperty):
-        assert 'temporal_on' in prop.info, \
-            'cannot temporal-ize a property without temporal_on=True'
-        # Convert rel prop to fk prop
-        prop_ = prop.parent.get_property(prop.info['temporal_on'])
-        assert prop_.parent.local_table is prop.parent.local_table
-        property_key = prop_.key
-        columns = (_copy_column(col) for col in prop_.columns)
+        columns = [_copy_column(column) for column in prop.local_columns]
     else:
-        property_key = prop.key
-        columns = (_copy_column(col) for col in prop.columns)
+        columns = [_copy_column(column) for column in prop.columns]
 
     local_table = cls.__table__
     table_name = truncate_identifier(
-        '%s_%s_%s' % (local_table.name, 'history', property_key))
-    index_name = truncate_identifier('%s_effective_idx' % table_name)
-    effective_exclude_name = truncate_identifier(
-        '%s_excl_effective' % table_name)
-    vclock_exclude_name = truncate_identifier('%s_excl_vclock' % table_name)
+        _generate_history_table_name(local_table, columns)
+    )
+    entity_foreign_keys = list(util.foreign_key_to(local_table))
+    entity_constraints = [
+        _exclusion_in(fk.type, fk.key)
+        for fk in entity_foreign_keys
+    ]
+
     constraints = [
-        sa.Index(index_name, 'effective', postgresql_using='gist'),
-        sap.ExcludeConstraint(
-            (sa.cast(sa.text('entity_id'), sap.TEXT), '='),
-            ('effective', '&&'),
-            name=effective_exclude_name,
+        sa.Index(
+            truncate_identifier('%s_effective_idx' % table_name),
+            'effective',
+            postgresql_using='gist'
         ),
         sap.ExcludeConstraint(
-            (sa.cast(sa.text('entity_id'), sap.TEXT), '='),
+            *entity_constraints,
+            ('effective', '&&'),
+            name=truncate_identifier('%s_excl_effective' % table_name),
+        ),
+        sap.ExcludeConstraint(
+            *entity_constraints,
             ('vclock', '&&'),
-            name=vclock_exclude_name
+            name=truncate_identifier('%s_excl_vclock' % table_name)
         ),
     ]
 
-    foreign_key = getattr(prop.parent.class_, 'id')  # TODO make this support different shape pks
-    return sa.Table(table_name, prop.parent.class_.metadata,
-                    sa.Column('id', sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True),
-                    sa.Column('effective', sap.TSTZRANGE, default=effective_now, nullable=False),
-                    sa.Column('vclock', sap.INT4RANGE, nullable=False),
-                    sa.Column('entity_id', sa.ForeignKey(foreign_key)),
-                    *itertools.chain(columns, constraints),
-                    schema=schema or local_table.schema,
-                    keep_existing=True)  # memoization ftw
+    return sa.Table(
+        table_name,
+        local_table.metadata,
+        sa.Column('id',
+                  sap.UUID(as_uuid=True),
+                  default=uuid.uuid4,
+                  primary_key=True),
+        sa.Column('effective',
+                  sap.TSTZRANGE,
+                  default=effective_now,
+                  nullable=False),
+        sa.Column('vclock', sap.INT4RANGE, nullable=False),
+        *itertools.chain(entity_foreign_keys, columns, constraints),
+        schema=schema or local_table.schema,
+        keep_existing=True
+    )  # memoization ftw

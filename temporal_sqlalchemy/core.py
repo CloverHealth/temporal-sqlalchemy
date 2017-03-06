@@ -9,13 +9,22 @@ class TemporalModel(object):
     temporal_options = None  # type: bases.ClockedOption
 
     @staticmethod
-    def build_clock_table(entity_table, metadata, schema, activity_class=None) -> sa.Table:
-        clock_table_name = clock.truncate_identifier("%s_clock" % entity_table.name)
+    def build_clock_table(entity_table: sa.Table,
+                          metadata: sa.MetaData,
+                          schema: str,
+                          activity_class=None) -> sa.Table:
+        clock_table_name = clock.truncate_identifier(
+            "%s_clock" % entity_table.name)
         clock_table = sa.Table(
             clock_table_name,
             metadata,
-            sa.Column('tick', sa.Integer, primary_key=True, autoincrement=False),
-            sa.Column('timestamp', sa.DateTime(True), server_default=sa.func.current_timestamp()),
+            sa.Column('tick',
+                      sa.Integer,
+                      primary_key=True,
+                      autoincrement=False),
+            sa.Column('timestamp',
+                      sa.DateTime(True),
+                      server_default=sa.func.current_timestamp()),
             schema=schema)
 
         entity_keys = set()
@@ -27,7 +36,9 @@ class TemporalModel(object):
         if activity_class:
             activity_keys = set()
             # support arbitrary shaped activity primary keys
-            for fk in util.foreign_key_to(activity_class.__table__, prefix='activity', nullable=False):
+            for fk in util.foreign_key_to(activity_class.__table__,
+                                          prefix='activity',
+                                          nullable=False):
                 clock_table.append_column(fk)
                 activity_keys.add(fk.key)
             # ensure we have DB constraint on clock <> activity uniqueness
@@ -44,22 +55,36 @@ class TemporalModel(object):
         entity_table = mapper.local_table
         temporal_declaration = cls.Temporal
         # get things defined on Temporal:
-        tracked_props = frozenset(mapper.get_property(prop) for prop in cls.Temporal.track)
+        tracked_props = frozenset(mapper.get_property(prop)
+                                  for prop in cls.Temporal.track)
         activity_class = getattr(temporal_declaration, 'activity_class', None)
         schema = getattr(temporal_declaration, 'schema', entity_table.schema)
 
-        clock_table = TemporalModel.build_clock_table(entity_table, cls.metadata, schema, activity_class)
+        clock_table = TemporalModel.build_clock_table(entity_table,
+                                                      cls.metadata,
+                                                      schema,
+                                                      activity_class)
         clock_properties = {
-            'entity': orm.relationship(lambda: cls, backref=orm.backref('clock', lazy='dynamic')),
+            'entity': orm.relationship(lambda: cls,
+                                       backref=orm.backref('clock',
+                                                           lazy='dynamic')),
             '__table__': clock_table
         }  # used to construct a new clock model for this entity
 
         if activity_class:
             # create a relationship to the activity from the clock model
             backref_name = '%s_clock' % entity_table.name
-            clock_properties['activity'] = orm.relationship(lambda: activity_class, backref=backref_name)
+            clock_properties['activity'] = \
+                orm.relationship(lambda: activity_class, backref=backref_name)
 
-        clock_model = clock.build_clock_class(cls.__name__, cls.metadata, clock_properties)
+        clock_model = clock.build_clock_class(cls.__name__,
+                                              cls.metadata,
+                                              clock_properties)
+
+        history_models = {
+            p: clock.build_history_class(cls, p, schema)
+            for p in tracked_props
+        }
 
         cls.temporal_options = bases.ClockedOption(
             temporal_props=tracked_props,

@@ -77,7 +77,7 @@ def test_create_temporal_options():
         models.Activity
     )
 ))
-def test_create_clock_table(table, expected_name, expected_cols, activity_class):
+def test_build_clock_table(table, expected_name, expected_cols, activity_class):
     clock_table = temporal_sqlalchemy.TemporalModel.build_clock_table(table,
                                                                       table.metadata,
                                                                       table.schema,
@@ -93,13 +93,35 @@ def test_create_clock_table(table, expected_name, expected_cols, activity_class)
             assert references_entity
 
 
-def test_create_clock_model():
+def test_creates_clock_model():
     options = models.NewStyleModel.temporal_options
 
-    clock_table = options.clock_table
-    assert (clock_table.__table__.name == '%s_clock' % models.NewStyleModel.__table__.name)
+    clock_model = options.clock_model
+    assert (clock_model.__table__.name == '%s_clock' % models.NewStyleModel.__table__.name)
 
-    inspected = sa.inspect(clock_table)
+    inspected = sa.inspect(clock_model)
     assert 'entity' in inspected.relationships
     entity_rel = inspected.relationships['entity']
     assert entity_rel.target is models.NewStyleModel.__table__
+
+
+class TestTemporalModelMixin(shared.DatabaseTest):
+    @pytest.fixture(autouse=True)
+    def setup(self, session):
+        models.basic_metadata.create_all(session.bind)
+
+    def test_creates_clock_table(self, session):
+        options = models.NewStyleModel.temporal_options
+
+        clock_table = options.clock_model.__table__
+        assert self.has_table(session.bind, clock_table.name, schema=clock_table.schema)
+
+    def test_create_history_tables(self, session):
+        table_name = models.NewStyleModel.__table__.name
+        # sanity check the current state table first
+        assert self.has_table(session.bind, table_name, schema=models.SCHEMA)
+        # then check the history tables
+        assert self.has_table(session.bind, '%s_history_description' % table_name)
+        assert self.has_table(session.bind, '%s_history_int_prop' % table_name)
+        assert self.has_table(session.bind, '%s_history_bool_prop' % table_name)
+        assert self.has_table(session.bind, '%s_history_datetime_prop' % table_name)

@@ -1,12 +1,15 @@
 import sqlalchemy as sa
 import sqlalchemy.ext.declarative as declarative
 import sqlalchemy.orm as orm
+import sqlalchemy.event as event
 
 from temporal_sqlalchemy import bases, clock, util
 
 
 class TemporalModel(object):
     temporal_options = None  # type: bases.ClockedOption
+
+    vclock = sa.Column(sa.Integer, default=1)
 
     @staticmethod
     def build_clock_table(entity_table: sa.Table,
@@ -52,11 +55,12 @@ class TemporalModel(object):
     def temporal_map(mapper: orm.Mapper):
         cls = mapper.class_
         assert hasattr(cls, 'Temporal')
-        entity_table = mapper.local_table
         temporal_declaration = cls.Temporal
+        assert 'vclock' not in temporal_declaration.track
+        entity_table = mapper.local_table
         # get things defined on Temporal:
         tracked_props = frozenset(mapper.get_property(prop)
-                                  for prop in cls.Temporal.track)
+                                  for prop in temporal_declaration.track)
         activity_class = getattr(temporal_declaration, 'activity_class', None)
         schema = getattr(temporal_declaration, 'schema', entity_table.schema)
 
@@ -92,6 +96,19 @@ class TemporalModel(object):
             clock_model=clock_model,
             activity_cls=activity_class
         )
+
+        event.listen(cls, 'init', TemporalModel.init_clock)
+
+    @staticmethod
+    def init_clock(clocked: 'TemporalModel', args, kwargs):
+        kwargs.update({'vclock': 1})
+        inital_tick = clocked.temporal_options.clock_model(
+            tick=kwargs['vclock'],
+            entity=clocked,
+        )
+
+        if 'activity' in kwargs:
+            inital_tick.activity = kwargs.pop('activity')
 
     @declarative.declared_attr
     def __mapper_cls__(cls):

@@ -46,7 +46,7 @@ def get_activity_clock_backref(
 def get_history_model(
         target: attributes.InstrumentedAttribute) -> TemporalProperty:
     """Get the history model for given entity class."""
-    assert issubclass(target.class_, Clocked)
+    assert hasattr(target.class_, 'temporal_options')
 
     return target.class_.temporal_options.history_tables[target.property]
 

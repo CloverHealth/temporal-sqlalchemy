@@ -1,13 +1,15 @@
+import datetime
+
 import pytest
 import sqlalchemy as sa
-import temporal_sqlalchemy
+import temporal_sqlalchemy as temporal
 
 from . import shared, models
 
 
 def test_declaration_check():
     with pytest.raises(AssertionError):
-        class Error(models.Base, temporal_sqlalchemy.TemporalModel):
+        class Error(models.Base, temporal.TemporalModel):
             __tablename__ = 'new_style_temporal_model'
             __table_args__ = {'schema': models.SCHEMA}
 
@@ -22,7 +24,7 @@ def test_create_temporal_options():
 
     assert hasattr(m, 'temporal_options')
     assert m.temporal_options is models.NewStyleModel.temporal_options
-    assert isinstance(m.temporal_options, temporal_sqlalchemy.ClockedOption)
+    assert isinstance(m.temporal_options, temporal.ClockedOption)
 
 
 @pytest.mark.parametrize('table,expected_name,expected_cols,activity_class', (
@@ -78,10 +80,12 @@ def test_create_temporal_options():
     )
 ))
 def test_build_clock_table(table, expected_name, expected_cols, activity_class):
-    clock_table = temporal_sqlalchemy.TemporalModel.build_clock_table(table,
-                                                                      table.metadata,
-                                                                      table.schema,
-                                                                      activity_class)
+    clock_table = temporal.TemporalModel.build_clock_table(
+        table,
+        table.metadata,
+        table.schema,
+        activity_class
+    )
     assert clock_table.name == expected_name
     assert clock_table.metadata is table.metadata
     assert {c.key for c in clock_table.c} == expected_cols
@@ -114,7 +118,11 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         options = models.NewStyleModel.temporal_options
 
         clock_table = options.clock_model.__table__
-        assert self.has_table(session.bind, clock_table.name, schema=clock_table.schema)
+        assert self.has_table(
+            session.bind,
+            clock_table.name,
+            schema=clock_table.schema
+        )
 
     def test_create_history_tables(self, session):
         table_name = models.NewStyleModel.__table__.name
@@ -125,3 +133,54 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         assert self.has_table(session.bind, '%s_history_int_prop' % table_name)
         assert self.has_table(session.bind, '%s_history_bool_prop' % table_name)
         assert self.has_table(session.bind, '%s_history_datetime_prop' % table_name)
+
+    def test_init_adds_clock_tick(self, session):
+        clock_query = session.query(
+            models.NewStyleModel.temporal_options.clock_model).count()
+        assert clock_query == 0
+        t = models.NewStyleModel(
+            description="desc",
+            int_prop=1,
+            bool_prop=True,
+            activity=models.Activity(description="Activity Description"),
+            datetime_prop=datetime.datetime.now(datetime.timezone.utc)
+        )
+        assert t.clock.count() == 1
+
+        session.add(t)
+        session.commit()
+
+        t = session.query(models.NewStyleModel).first()
+        clock_query = session.query(
+            models.NewStyleModel.temporal_options.clock_model)
+        assert clock_query.count() == 1
+        assert t.vclock == 1
+        assert t.clock.count() == 1
+
+        clock = clock_query.first()
+
+        desc_history_model = temporal.get_history_model(
+            models.NewStyleModel.description)
+        int_prop_history_model = temporal.get_history_model(
+            models.NewStyleModel.int_prop)
+        bool_prop_history_model = temporal.get_history_model(
+            models.NewStyleModel.bool_prop)
+        datetime_prop_history_model = temporal.get_history_model(
+            models.NewStyleModel.datetime_prop)
+
+        for attr, backref, history_model in [
+            ('description', 'description_history', desc_history_model),
+            ('int_prop', 'int_prop_history', int_prop_history_model),
+            ('bool_prop', 'bool_prop_history', bool_prop_history_model),
+            ('datetime_prop', 'datetime_prop_history', datetime_prop_history_model),
+        ]:
+            backref_history_query = getattr(t, backref)
+            clock_query = session.query(history_model).count()
+            assert clock_query == 1, "missing entry for %r" % history_model
+            assert clock_query == backref_history_query.count()
+
+            backref_history = backref_history_query[0]
+            history = session.query(history_model).first()
+            assert clock.tick in history.vclock
+            assert clock.tick in backref_history.vclock
+            assert getattr(history, attr) == getattr(t, attr) == getattr(backref_history, attr)

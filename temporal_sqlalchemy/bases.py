@@ -3,7 +3,6 @@ import collections
 import contextlib
 import datetime as dt
 import typing
-import uuid  # noqa: F401
 import warnings
 
 import sqlalchemy as sa
@@ -20,8 +19,6 @@ T_PROPS = typing.TypeVar(
 
 
 class EntityClock(object):
-    entity_id = None  # type: typing.Union[int, uuid.UUID]
-
     tick = sa.Column(sa.Integer, primary_key=True, autoincrement=False)
     timestamp = sa.Column(sa.DateTime(True),
                           server_default=sa.func.current_timestamp())

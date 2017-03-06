@@ -4,6 +4,7 @@ import contextlib
 import datetime as dt
 import typing
 import uuid  # noqa: F401
+import warnings
 
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
@@ -44,15 +45,25 @@ class TemporalActivityMixin(object):
 class ClockedOption(object):
     def __init__(
             self,
-            history_tables: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
+            history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
             temporal_props: typing.Iterable[T_PROPS],
-            clock_table: nine.Type[EntityClock],
+            clock_model: nine.Type[EntityClock],
             activity_cls: nine.Type[TemporalActivityMixin] = None):
-        self.history_tables = history_tables
+        self.history_models = history_models
         self.temporal_props = temporal_props
 
-        self.clock_table = clock_table
+        self.clock_model = clock_model
         self.activity_cls = activity_cls
+
+    @property
+    def clock_table(self):
+        warnings.warn('use ClockedOption.clock_model instead', PendingDeprecationWarning)
+        return self.clock_model
+
+    @property
+    def history_tables(self):
+        warnings.warn('use ClockedOption.history_models instead', PendingDeprecationWarning)
+        return self.history_models
 
     @staticmethod
     def make_clock(effective_lower: dt.datetime,

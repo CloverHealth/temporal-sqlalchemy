@@ -175,8 +175,8 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
 
         temporal_options = ClockedOption(
             temporal_props=local_props | relationship_props,
-            history_tables=history_tables,
-            clock_table=clock_table,
+            history_models=history_tables,
+            clock_model=clock_table,
             activity_cls=activity_cls,
         )
         cls.temporal_options = temporal_options

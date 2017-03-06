@@ -63,8 +63,8 @@ class TemporalModel(object):
 
         cls.temporal_options = bases.ClockedOption(
             temporal_props=tracked_props,
-            history_tables=None,
-            clock_table=clock_model,
+            history_models=history_models,
+            clock_model=clock_model,
             activity_cls=activity_class
         )
 

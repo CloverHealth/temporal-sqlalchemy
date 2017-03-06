@@ -114,6 +114,16 @@ class TestTemporalModelMixin(shared.DatabaseTest):
     def setup(self, session):
         models.basic_metadata.create_all(session.bind)
 
+    @pytest.fixture()
+    def newstylemodel(self, session):
+        return models.NewStyleModel(
+            description="desc",
+            int_prop=1,
+            bool_prop=True,
+            activity=models.Activity(description="Activity Description"),
+            datetime_prop=datetime.datetime.now(datetime.timezone.utc)
+        )
+
     def test_creates_clock_table(self, session):
         options = models.NewStyleModel.temporal_options
 
@@ -134,20 +144,13 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         assert self.has_table(session.bind, '%s_history_bool_prop' % table_name)
         assert self.has_table(session.bind, '%s_history_datetime_prop' % table_name)
 
-    def test_init_adds_clock_tick(self, session):
+    def test_init_adds_clock_tick(self, session, newstylemodel):
         clock_query = session.query(
             models.NewStyleModel.temporal_options.clock_model).count()
         assert clock_query == 0
-        t = models.NewStyleModel(
-            description="desc",
-            int_prop=1,
-            bool_prop=True,
-            activity=models.Activity(description="Activity Description"),
-            datetime_prop=datetime.datetime.now(datetime.timezone.utc)
-        )
-        assert t.clock.count() == 1
+        assert newstylemodel.clock.count() == 1
 
-        session.add(t)
+        session.add(newstylemodel)
         session.commit()
 
         t = session.query(models.NewStyleModel).first()
@@ -184,3 +187,15 @@ class TestTemporalModelMixin(shared.DatabaseTest):
             assert clock.tick in history.vclock
             assert clock.tick in backref_history.vclock
             assert getattr(history, attr) == getattr(t, attr) == getattr(backref_history, attr)
+
+    def test_date_created(self, session, newstylemodel):
+        session.add(newstylemodel)
+        session.commit()
+
+        clock_query = session.query(
+            models.NewStyleModel.temporal_options.clock_model
+        ).filter_by(entity=newstylemodel)
+        assert clock_query.count() == 1
+        assert newstylemodel.vclock == 1
+        assert newstylemodel.clock.count() == 1
+        assert newstylemodel.date_created == clock_query.first().timestamp

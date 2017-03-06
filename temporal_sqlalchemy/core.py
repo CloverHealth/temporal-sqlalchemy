@@ -6,11 +6,7 @@ import sqlalchemy.event as event
 from temporal_sqlalchemy import bases, clock, util
 
 
-class TemporalModel(object):
-    temporal_options = None  # type: bases.ClockedOption
-
-    vclock = sa.Column(sa.Integer, default=1)
-
+class TemporalModel(bases.Clocked):
     @staticmethod
     def build_clock_table(entity_table: sa.Table,
                           metadata: sa.MetaData,
@@ -74,6 +70,24 @@ class TemporalModel(object):
         clock_properties = {
             'entity': orm.relationship(
                 lambda: cls, backref=orm.backref('clock', lazy='dynamic')
+            ),
+            'entity_first_tick': orm.relationship(
+                lambda: cls,
+                backref=orm.backref(
+                    'first_tick',
+                    order_by=sa.asc(clock_table.c.tick),
+                    uselist=False,  # single record
+                    viewonly=True  # view only
+                )
+            ),
+            'entity_latest_tick': orm.relationship(
+                lambda: cls,
+                backref=orm.backref(
+                    'latest_tick',
+                    order_by=sa.desc(clock_table.c.tick),
+                    uselist=False,  # single record
+                    viewonly=True  # view only
+                )
             ),
             '__table__': clock_table
         }  # used to construct a new clock model for this entity

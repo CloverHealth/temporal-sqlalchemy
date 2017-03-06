@@ -59,19 +59,22 @@ class TemporalModel(object):
         assert 'vclock' not in temporal_declaration.track
         entity_table = mapper.local_table
         # get things defined on Temporal:
-        tracked_props = frozenset(mapper.get_property(prop)
-                                  for prop in temporal_declaration.track)
+        tracked_props = frozenset(
+            mapper.get_property(prop) for prop in temporal_declaration.track
+        )
         activity_class = getattr(temporal_declaration, 'activity_class', None)
         schema = getattr(temporal_declaration, 'schema', entity_table.schema)
 
-        clock_table = TemporalModel.build_clock_table(entity_table,
-                                                      cls.metadata,
-                                                      schema,
-                                                      activity_class)
+        clock_table = TemporalModel.build_clock_table(
+            entity_table,
+            cls.metadata,
+            schema,
+            activity_class
+        )
         clock_properties = {
-            'entity': orm.relationship(lambda: cls,
-                                       backref=orm.backref('clock',
-                                                           lazy='dynamic')),
+            'entity': orm.relationship(
+                lambda: cls, backref=orm.backref('clock', lazy='dynamic')
+            ),
             '__table__': clock_table
         }  # used to construct a new clock model for this entity
 

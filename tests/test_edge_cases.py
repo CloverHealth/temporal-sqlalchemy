@@ -5,8 +5,8 @@ from . import shared, models
 
 class TestEdgeCases(shared.DatabaseTest):
 
-    def test_indentifiers_too_long(self, session):
-        models.edgecase_metadata.create_all(session.bind)
+    def test_indentifiers_too_long(self):
+        models.edgecase_metadata.create_all(self.connection)
 
         clock_table = models.HugeIndices.temporal_options.clock_table.__table__
         assert clock_table.name == (

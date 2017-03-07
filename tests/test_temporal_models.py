@@ -1,6 +1,5 @@
 import datetime
 
-import pytest
 import psycopg2.extras as psql_extras
 import sqlalchemy as sa
 
@@ -10,10 +9,6 @@ from . import shared, models
 
 
 class TestTemporalModels(shared.DatabaseTest):
-
-    @pytest.fixture(autouse=True)
-    def setup(self, session):
-        models.basic_metadata.create_all(session.bind)
 
     def test_temporal_options_class(self):
         options = models.SimpleTableTemporal.temporal_options
@@ -35,13 +30,13 @@ class TestTemporalModels(shared.DatabaseTest):
         assert (temp.temporal_options
                 is models.SimpleTableTemporal.temporal_options)
 
-    def test_creates_temporal_tables(self, session):
+    def test_creates_temporal_tables(self):
         table_name = models.SimpleTableTemporal.__table__.name
 
-        assert self.has_table(session.bind, table_name, schema=models.SCHEMA)
-        assert self.has_table(session.bind, '%s_clock' % table_name)
-        assert self.has_table(session.bind, '%s_history_prop_a' % table_name)
-        assert self.has_table(session.bind, '%s_history_prop_b' % table_name)
+        assert self.has_table(self.connection, table_name, schema=models.SCHEMA)
+        assert self.has_table(self.connection, '%s_clock' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_a' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_b' % table_name)
 
     def test_init_adds_clock_tick(self, session):
         clock_query = session.query(

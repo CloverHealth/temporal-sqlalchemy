@@ -110,12 +110,8 @@ def test_creates_clock_model():
 
 
 class TestTemporalModelMixin(shared.DatabaseTest):
-    @pytest.fixture(autouse=True)
-    def setup(self, session):
-        models.basic_metadata.create_all(session.bind)
-
     @pytest.fixture()
-    def newstylemodel(self, session):
+    def newstylemodel(self):
         return models.NewStyleModel(
             description="desc",
             int_prop=1,
@@ -124,25 +120,25 @@ class TestTemporalModelMixin(shared.DatabaseTest):
             datetime_prop=datetime.datetime.now(datetime.timezone.utc)
         )
 
-    def test_creates_clock_table(self, session):
+    def test_creates_clock_table(self):
         options = models.NewStyleModel.temporal_options
 
         clock_table = options.clock_model.__table__
         assert self.has_table(
-            session.bind,
+            self.connection,
             clock_table.name,
             schema=clock_table.schema
         )
 
-    def test_create_history_tables(self, session):
+    def test_create_history_tables(self):
         table_name = models.NewStyleModel.__table__.name
         # sanity check the current state table first
-        assert self.has_table(session.bind, table_name, schema=models.SCHEMA)
+        assert self.has_table(self.connection, table_name, schema=models.SCHEMA)
         # then check the history tables
-        assert self.has_table(session.bind, '%s_history_description' % table_name)
-        assert self.has_table(session.bind, '%s_history_int_prop' % table_name)
-        assert self.has_table(session.bind, '%s_history_bool_prop' % table_name)
-        assert self.has_table(session.bind, '%s_history_datetime_prop' % table_name)
+        assert self.has_table(self.connection, '%s_history_description' % table_name)
+        assert self.has_table(self.connection, '%s_history_int_prop' % table_name)
+        assert self.has_table(self.connection, '%s_history_bool_prop' % table_name)
+        assert self.has_table(self.connection, '%s_history_datetime_prop' % table_name)
 
     def test_init_adds_clock_tick(self, session, newstylemodel):
         clock_query = session.query(

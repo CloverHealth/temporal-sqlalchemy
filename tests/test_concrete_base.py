@@ -1,6 +1,5 @@
 import datetime
 
-import pytest
 import psycopg2.extras as psql_extras
 import sqlalchemy as sa
 
@@ -10,10 +9,6 @@ from . import shared, models
 
 
 class TestTemporalConcreteBaseModels(shared.DatabaseTest):
-    @pytest.fixture(autouse=True)
-    def setup(self, session):
-        models.basic_metadata.create_all(session.bind)
-
     def test_temporal_options_class(self):
         options = models.SimpleConcreteChildTemporalTable.temporal_options
 
@@ -34,17 +29,16 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         assert (temp.temporal_options
                 is models.SimpleConcreteChildTemporalTable.temporal_options)
 
-    def test_creates_clock_table(self, session):
+    def test_creates_clock_table(self):
         table_name = models.SimpleConcreteChildTemporalTable.__table__.name
-        conn = session.bind
-        assert self.has_table(conn, table_name, schema=models.SCHEMA)
-        assert self.has_table(conn, '%s_clock' % table_name)
-        assert self.has_table(conn, '%s_history_prop_a' % table_name)
-        assert self.has_table(conn, '%s_history_prop_b' % table_name)
-        assert self.has_table(conn, '%s_history_prop_c' % table_name)
-        assert self.has_table(conn, '%s_history_prop_d' % table_name)
-        assert self.has_table(conn, '%s_history_prop_e' % table_name)
-        assert self.has_table(conn, '%s_history_prop_f' % table_name)
+        assert self.has_table(self.connection, table_name, schema=models.SCHEMA)
+        assert self.has_table(self.connection, '%s_clock' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_a' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_b' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_c' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_d' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_e' % table_name)
+        assert self.has_table(self.connection, '%s_history_prop_f' % table_name)
 
     def test_init_adds_clock_tick(self, session):
         clock_query = session.query(

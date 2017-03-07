@@ -22,3 +22,4 @@ class TestSession(shared.DatabaseTest):
 
         with pytest.raises(ValueError):
             session.delete(newstylemodel)
+            session.commit()

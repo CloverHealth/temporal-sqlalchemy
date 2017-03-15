@@ -58,6 +58,10 @@ class TemporalModel(bases.Clocked):
         tracked_props = frozenset(
             mapper.get_property(prop) for prop in temporal_declaration.track
         )
+        # make sure all temporal properties have active_history (always loaded)
+        for prop in tracked_props:
+            getattr(cls, prop.key).impl.active_history = True
+
         activity_class = getattr(temporal_declaration, 'activity_class', None)
         schema = getattr(temporal_declaration, 'schema', entity_table.schema)
 
@@ -75,7 +79,11 @@ class TemporalModel(bases.Clocked):
                 lambda: cls,
                 backref=orm.backref(
                     'first_tick',
-                    order_by=sa.asc(clock_table.c.tick),
+                    primaryjoin=sa.and_(
+                        clock_table.join(entity_table).onclause,
+                        clock_table.c.tick == 1
+                    ),
+                    innerjoin=True,
                     uselist=False,  # single record
                     viewonly=True  # view only
                 )
@@ -84,7 +92,11 @@ class TemporalModel(bases.Clocked):
                 lambda: cls,
                 backref=orm.backref(
                     'latest_tick',
-                    order_by=sa.desc(clock_table.c.tick),
+                    primaryjoin=sa.and_(
+                        clock_table.join(entity_table).onclause,
+                        entity_table.c.vclock == clock_table.c.tick
+                    ),
+                    innerjoin=True,
                     uselist=False,  # single record
                     viewonly=True  # view only
                 )

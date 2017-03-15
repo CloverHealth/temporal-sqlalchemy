@@ -185,13 +185,75 @@ class TestTemporalModelMixin(shared.DatabaseTest):
             assert getattr(history, attr) == getattr(t, attr) == getattr(backref_history, attr)
 
     def test_date_created(self, session, newstylemodel):
+        clock_model = models.NewStyleModel.temporal_options.clock_model
         session.add(newstylemodel)
         session.commit()
 
-        clock_query = session.query(
-            models.NewStyleModel.temporal_options.clock_model
-        ).filter_by(entity=newstylemodel)
-        assert clock_query.count() == 1
+        tick = session.query(clock_model).get((1, newstylemodel.id))
         assert newstylemodel.vclock == 1
         assert newstylemodel.clock.count() == 1
-        assert newstylemodel.date_created == clock_query.first().timestamp
+        assert newstylemodel.date_created == tick.timestamp
+
+    def test_date_modified(self, session, newstylemodel):
+        clock_model = models.NewStyleModel.temporal_options.clock_model
+        session.add(newstylemodel)
+        session.commit()
+
+        first_tick = session.query(clock_model).get((1, newstylemodel.id))
+        assert newstylemodel.vclock == 1
+        assert newstylemodel.clock.count() == 1
+        assert newstylemodel.date_created == first_tick.timestamp
+
+        activity = models.Activity(description="Activity Description #2")
+        with newstylemodel.clock_tick(activity=activity):
+            newstylemodel.description = "this is new"
+
+        session.commit()
+
+        second_tick = session.query(clock_model).get((1, newstylemodel.id))
+        assert newstylemodel.vclock == 2
+        assert newstylemodel.clock.count() == 2
+        assert newstylemodel.date_created == first_tick.timestamp
+        assert newstylemodel.date_modified == second_tick.timestamp
+
+    def test_clock_tick_editing(self, session, newstylemodel):
+        clock_model = models.NewStyleModel.temporal_options.clock_model
+
+        session.add(newstylemodel)
+        session.commit()
+
+        activity = models.Activity(description="Activity Description #2")
+        with newstylemodel.clock_tick(activity=activity):
+            newstylemodel.description = "this is new"
+            newstylemodel.int_prop = 2
+            newstylemodel.bool_prop = False
+            newstylemodel.datetime_prop = datetime.datetime(2017, 2, 10)
+
+        session.commit()
+
+        t = session.query(models.NewStyleModel).first()
+        clock_query = session.query(clock_model)
+        assert clock_query.count() == 2
+
+        create_clock = clock_query.first()
+        update_clock = clock_query.order_by(
+            clock_model.timestamp.desc()).first()
+        assert create_clock.timestamp == t.date_created
+        assert update_clock.timestamp == t.date_modified
+
+        assert t.vclock == 2
+        assert t.clock.count() == 2
+
+        clock = (
+            clock_query
+            .order_by(clock_model.tick.desc())
+            .first())
+        for history_model in (models.NewStyleModel
+                              .temporal_options.history_models.values()):
+            clock_query = session.query(history_model).count()
+            assert clock_query == 2
+
+            history = (
+                session.query(history_model)
+                .order_by(history_model.vclock.desc()).first())
+            assert clock.tick in history.vclock

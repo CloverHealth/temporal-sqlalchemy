@@ -54,12 +54,16 @@ class ClockedOption(object):
 
     @property
     def clock_table(self):
-        warnings.warn('use ClockedOption.clock_model instead', PendingDeprecationWarning)
+        warnings.warn(
+            'use ClockedOption.clock_model instead',
+            PendingDeprecationWarning)
         return self.clock_model
 
     @property
     def history_tables(self):
-        warnings.warn('use ClockedOption.history_models instead', PendingDeprecationWarning)
+        warnings.warn(
+            'use ClockedOption.history_models instead',
+            PendingDeprecationWarning)
         return self.history_models
 
     @staticmethod
@@ -91,7 +95,7 @@ class ClockedOption(object):
         new_clock = self.make_clock(timestamp, new_tick)
         attr = {'entity': clocked}
 
-        for prop, cls in self.history_tables.items():
+        for prop, cls in self.history_models.items():
             hist = attr.copy()
             # fires a load on any deferred columns
             if prop.key not in state.dict:
@@ -134,7 +138,11 @@ class ClockedOption(object):
                 # Add new history row
                 hist[prop.key] = changes.added[0]
                 session.add(
-                    cls(vclock=new_clock.vclock, effective=new_clock.effective, **hist)
+                    cls(
+                        vclock=new_clock.vclock,
+                        effective=new_clock.effective,
+                        **hist
+                    )
                 )
 
 
@@ -185,7 +193,7 @@ class Clocked(object):
         if session.is_modified(self):
             self.vclock += 1
 
-            new_clock_tick = self.temporal_options.clock_table(
+            new_clock_tick = self.temporal_options.clock_model(
                 entity=self, tick=self.vclock)
             if activity is not None:
                 new_clock_tick.activity = activity

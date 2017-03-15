@@ -48,9 +48,7 @@ class TemporalModel(bases.Clocked):
         return clock_table
 
     @staticmethod
-    def temporal_map(mapper: orm.Mapper):
-        cls = mapper.class_
-        assert hasattr(cls, 'Temporal')
+    def temporal_map(mapper: orm.Mapper, cls: bases.Clocked):
         temporal_declaration = cls.Temporal
         assert 'vclock' not in temporal_declaration.track
         entity_table = mapper.local_table
@@ -143,9 +141,6 @@ class TemporalModel(bases.Clocked):
     def __mapper_cls__(cls):
         assert hasattr(cls, 'Temporal')
 
-        def map_(cls, *args, **kwargs):
-            mp = orm.mapper(cls, *args, **kwargs)
-            cls.temporal_map(mp)
-            return mp
+        event.listen(cls, 'mapper_configured', TemporalModel.temporal_map)
 
-        return map_
+        return orm.mapper

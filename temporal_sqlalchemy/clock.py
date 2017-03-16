@@ -295,14 +295,12 @@ def build_history_table(
             postgresql_using='gist'
         ),
         sap.ExcludeConstraint(
-            *entity_constraints,
-            ('effective', '&&'),
-            name=truncate_identifier('%s_excl_effective' % table_name),
+            *itertools.chain(entity_constraints, [('vclock', '&&')]),
+            name=truncate_identifier('%s_excl_vclock' % table_name)
         ),
         sap.ExcludeConstraint(
-            *entity_constraints,
-            ('vclock', '&&'),
-            name=truncate_identifier('%s_excl_vclock' % table_name)
+            *itertools.chain(entity_constraints, [('effective', '&&')]),
+            name=truncate_identifier('%s_excl_effective' % table_name)
         ),
     ]
 

@@ -65,7 +65,7 @@ class TemporalModel(bases.Clocked):
 
         clock_table = TemporalModel.build_clock_table(
             entity_table,
-            cls.metadata,
+            entity_table.metadata,
             schema,
             activity_class
         )
@@ -109,7 +109,7 @@ class TemporalModel(bases.Clocked):
                 orm.relationship(lambda: activity_class, backref=backref_name)
 
         clock_model = clock.build_clock_class(cls.__name__,
-                                              cls.metadata,
+                                              entity_table.metadata,
                                               clock_properties)
 
         history_models = {
@@ -128,14 +128,14 @@ class TemporalModel(bases.Clocked):
 
     @staticmethod
     def init_clock(clocked: 'TemporalModel', args, kwargs):
-        kwargs.update({'vclock': 1})
-        inital_tick = clocked.temporal_options.clock_model(
+        kwargs.setdefault('vclock', 1)
+        initial_tick = clocked.temporal_options.clock_model(
             tick=kwargs['vclock'],
             entity=clocked,
         )
 
         if 'activity' in kwargs:
-            inital_tick.activity = kwargs.pop('activity')
+            initial_tick.activity = kwargs.pop('activity')
 
     @declarative.declared_attr
     def __mapper_cls__(cls):

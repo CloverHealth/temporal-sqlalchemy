@@ -6,15 +6,27 @@ language: python
 
 matrix:
   include:
-    - python: 3.5.2
+    - python: 3.6.0
       addons:
         postgresql: 9.5
       env: PG=9.5
-    - python: 3.5.2
+    - python: 3.6.0
       addons:
         postgresql: 9.4
       env: PG=9.4
-    - python: 3.5.2
+    - python: 3.6.0
+      addons:
+        postgresql: 9.3
+      env: PG=9.3
+    - python: 3.5.3
+      addons:
+        postgresql: 9.5
+      env: PG=9.5
+    - python: 3.5.3
+      addons:
+        postgresql: 9.4
+      env: PG=9.4
+    - python: 3.5.3
       addons:
         postgresql: 9.3
       env: PG=9.3

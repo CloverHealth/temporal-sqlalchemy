@@ -17,7 +17,7 @@ DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
 if sys.version_info < (3, 5):
     DEPENDENCIES.append('typing>=3.5.2,<4.0.0')
 if sys.version_info < (3, 4):
-    DEPENDENCIES.append('singledispatch=>3.4.0.3,<4.0.0')
+    DEPENDENCIES.append('singledispatch=>3.4.0,<4.0.0')
 TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
 SETUP_DEPENDENCIES = []
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):

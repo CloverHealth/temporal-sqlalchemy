@@ -4,7 +4,7 @@ import sqlalchemy.orm as orm
 import testing.postgresql
 
 import temporal_sqlalchemy as temporal
-
+from . import models
 
 @pytest.yield_fixture(scope='session')
 def engine():
@@ -27,6 +27,11 @@ def connection(engine):
             CREATE EXTENSION IF NOT EXISTS "%s"
             WITH SCHEMA pg_catalog
         """ % extension)
+
+    for schema in [models.SCHEMA, models.TEMPORAL_SCHEMA]:
+        conn.execute('CREATE SCHEMA IF NOT EXISTS ' + schema)
+
+    models.basic_metadata.create_all(conn)
 
     yield conn
 

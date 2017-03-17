@@ -1,15 +1,9 @@
-import pytest
-
 import temporal_sqlalchemy as temporal
 
 from . import shared, models
 
 
 class TestTemporalMultiEntityWithActivity(shared.DatabaseTest):
-    @pytest.fixture(autouse=True)
-    def setup(self, session):
-        models.activity_metadata.create_all(session.bind)
-
     def test_activity_on_multi_entity_create(self, session):
         activity = models.Activity(description='Create temps')
         session.add(activity)

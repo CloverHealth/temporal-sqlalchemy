@@ -8,10 +8,6 @@ from . import shared, models
 
 
 class TestTemporalWithActivity(shared.DatabaseTest):
-    @pytest.fixture(autouse=True)
-    def setup(self, session):
-        models.activity_metadata.create_all(session.bind)
-
     def test_clock_table_has_activity_id(self):
         assert isinstance(
             models.FirstTemporalWithActivity

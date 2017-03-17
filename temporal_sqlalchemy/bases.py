@@ -3,7 +3,7 @@ import collections
 import contextlib
 import datetime as dt
 import typing
-import uuid  # noqa: F401
+import warnings
 
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
@@ -19,8 +19,6 @@ T_PROPS = typing.TypeVar(
 
 
 class EntityClock(object):
-    entity_id = None  # type: typing.Union[int, uuid.UUID]
-
     tick = sa.Column(sa.Integer, primary_key=True, autoincrement=False)
     timestamp = sa.Column(sa.DateTime(True),
                           server_default=sa.func.current_timestamp())
@@ -44,15 +42,29 @@ class TemporalActivityMixin(object):
 class ClockedOption(object):
     def __init__(
             self,
-            history_tables: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
+            history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
             temporal_props: typing.Iterable[T_PROPS],
-            clock_table: nine.Type[EntityClock],
+            clock_model: nine.Type[EntityClock],
             activity_cls: nine.Type[TemporalActivityMixin] = None):
-        self.history_tables = history_tables
+        self.history_models = history_models
         self.temporal_props = temporal_props
 
-        self.clock_table = clock_table
+        self.clock_model = clock_model
         self.activity_cls = activity_cls
+
+    @property
+    def clock_table(self):
+        warnings.warn(
+            'use ClockedOption.clock_model instead',
+            PendingDeprecationWarning)
+        return self.clock_model
+
+    @property
+    def history_tables(self):
+        warnings.warn(
+            'use ClockedOption.history_models instead',
+            PendingDeprecationWarning)
+        return self.history_models
 
     @staticmethod
     def make_clock(effective_lower: dt.datetime,
@@ -83,7 +95,7 @@ class ClockedOption(object):
         new_clock = self.make_clock(timestamp, new_tick)
         attr = {'entity': clocked}
 
-        for prop, cls in self.history_tables.items():
+        for prop, cls in self.history_models.items():
             hist = attr.copy()
             # fires a load on any deferred columns
             if prop.key not in state.dict:
@@ -126,7 +138,11 @@ class ClockedOption(object):
                 # Add new history row
                 hist[prop.key] = changes.added[0]
                 session.add(
-                    cls(vclock=new_clock.vclock, effective=new_clock.effective, **hist)
+                    cls(
+                        vclock=new_clock.vclock,
+                        effective=new_clock.effective,
+                        **hist
+                    )
                 )
 
 
@@ -177,7 +193,7 @@ class Clocked(object):
         if session.is_modified(self):
             self.vclock += 1
 
-            new_clock_tick = self.temporal_options.clock_table(
+            new_clock_tick = self.temporal_options.clock_model(
                 entity=self, tick=self.vclock)
             if activity is not None:
                 new_clock_tick.activity = activity

@@ -6,15 +6,6 @@ import temporal_sqlalchemy as temporal
 from . import models
 
 
-@pytest.fixture(autouse=True)
-def setup(session):
-    """Generate schema and tables from a list of model bases."""
-    for schema in models.basic_metadata._schemas:
-        session.execute('CREATE SCHEMA IF NOT EXISTS %s' % schema)
-
-    models.basic_metadata.create_all(session.bind)
-
-
 def test_joined_enums_create(session):
     session.add_all([
         models.JoinedEnumA(val='foo'),

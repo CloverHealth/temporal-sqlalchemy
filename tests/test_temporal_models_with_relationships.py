@@ -1,14 +1,9 @@
-import pytest
 import sqlalchemy as sa
 
 from . import shared, models
 
 
 class TestTemporalRelationshipModels(shared.DatabaseTest):
-    @pytest.fixture(autouse=True)
-    def setup(self, session):
-        models.related_metadata.create_all(session.bind)
-
     def test_assign_by_rel_on_init(self, session):
         related = models.RelatedTable(prop_a=1)
         parent = models.RelationalTemporalModel(

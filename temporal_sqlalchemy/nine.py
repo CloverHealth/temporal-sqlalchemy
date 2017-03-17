@@ -10,3 +10,10 @@ except ImportError:  # pragma: no cover
 
     class Type(type, typing.Generic[CT], extra=type):
         pass
+
+
+# single dispatch is in functools from >=3.4
+try:
+    from functools import singledispatch
+except ImportError:  # pragma: no cover
+    from singledispatch import singledispatch

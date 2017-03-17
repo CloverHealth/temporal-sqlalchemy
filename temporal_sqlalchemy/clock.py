@@ -1,5 +1,4 @@
 import datetime as dt
-import functools
 import itertools
 import uuid
 import typing
@@ -258,7 +257,7 @@ def _generate_history_table_name(local_table: sa.Table,
     return "%s_%s" % (base_name, "_".join(sort_col_names))
 
 
-@functools.singledispatch
+@nine.singledispatch
 def _exclusion_in(type_, name) -> typing.Tuple:
     return name, '='
 

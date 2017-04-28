@@ -45,12 +45,3 @@ columns to your model.
 **Temporal SQLAlchemy** uses a table per property, with an entity clock -- all
 state is written to the entity table as expected, but additionally recorded
 into series of history tables (per property) and clock entries (per entity).
-
-There are many other ways to add a time dimension to your data, but for now
-lets just focus on those three. Shadow history tables and
-:code:`date_created`/:code:`date_modified` are excellent choices if the
-changes to your data are low velocity. If you have no requirements around
-surfacing the history for specific features, or the expected changes happen
-infrequently, both should suffice. However, if you know your data changes a
-lot or you need to walk the history to build features (who was this assigned
-to before? when did it go from status a to status b?) you might want to consider using **Temporal SQLAlchemy**.

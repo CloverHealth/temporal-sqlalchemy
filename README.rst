@@ -1,13 +1,6 @@
 Temporal SQLAlchemy
 -------------------
 
-Why
-===
-
-As a Medicare Advantage company, Clover is beholden to rather stringent auditability requirements.
-Additionally, there is a need as a *data driven organization* to have a solid understanding of
-our data and how it changes over time.
-
 Some Terms
 ==========
 

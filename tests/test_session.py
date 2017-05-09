@@ -18,24 +18,6 @@ class TestSession(shared.DatabaseTest):
             datetime_prop=datetime.datetime.now(datetime.timezone.utc)
         )
 
-    @pytest.fixture()
-    def raw_session_maker(self):
-        session = orm.sessionmaker()
-
-        yield session
-
-        session.close_all()
-
-    @pytest.fixture()
-    def raw_session(self, connection, raw_session_maker):
-        transaction = connection.begin()
-        sess = raw_session_maker(bind=connection)
-
-        yield sess
-
-        transaction.rollback()
-        sess.close()
-
     def test_errors_on_delete(self, session, newstylemodel):
         session.add(newstylemodel)
         session.commit()
@@ -44,7 +26,7 @@ class TestSession(shared.DatabaseTest):
             session.delete(newstylemodel)
             session.commit()
 
-    def test_is_temporal_session(self, session, raw_session):
+    def test_is_temporal_session_on_temporal_session(self, session):
         # verify temporal session
         assert is_temporal_session(session)
 
@@ -52,5 +34,11 @@ class TestSession(shared.DatabaseTest):
         double_wrapped_session = temporal_session(session)
         assert is_temporal_session(double_wrapped_session)
 
-        # verify plain session
-        assert not is_temporal_session(raw_session)
+    def test_is_temporal_session_on_raw_session(self, session, connection):
+        with connection.begin():
+            session_maker = orm.sessionmaker()
+            raw_session = session_maker(bind=connection)
+            try:
+                assert not is_temporal_session(raw_session)
+            finally:
+                raw_session.close()

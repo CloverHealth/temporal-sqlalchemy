@@ -222,6 +222,43 @@ class TestTemporalModels(shared.DatabaseTest):
             assert 3 in recorded_history.vclock
             assert getattr(t, attr) == getattr(recorded_history, attr)
 
+    def test_edit_on_double_wrapped(self, session):
+        double_wrapped_session = temporal.temporal_session(session)
+
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11, 1, 2, 3,
+                                     tzinfo=datetime.timezone.utc),
+            prop_d={'foo': 'old value'},
+            prop_e=psql_extras.DateRange(datetime.date(2016, 1, 1),
+                                         datetime.date(2016, 1, 10)),
+            prop_f=['old', 'stuff']
+        )
+        double_wrapped_session.add(t)
+        double_wrapped_session.commit()
+
+        t = double_wrapped_session.query(models.SimpleTableTemporal).first()
+        with t.clock_tick():
+            t.prop_a = 2
+            t.prop_b = 'bar'
+            double_wrapped_session.commit()
+
+        history_tables = {
+            'prop_a': temporal.get_history_model(
+                models.SimpleTableTemporal.prop_a),
+            'prop_b': temporal.get_history_model(
+                models.SimpleTableTemporal.prop_b),
+        }
+        for attr, history in history_tables.items():
+            clock_query = session.query(history)
+            assert clock_query.count() == 2, \
+                "%r missing a history entry for initial value" % history
+
+            recorded_history = clock_query[-1]
+            assert 2 in recorded_history.vclock
+            assert getattr(t, attr) == getattr(recorded_history, attr)
+
     def test_doesnt_duplicate_unnecessary_history(self, session):
         history_tables = {
             'prop_a': temporal.get_history_model(

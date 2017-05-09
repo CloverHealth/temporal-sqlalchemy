@@ -1,5 +1,4 @@
 import datetime
-import functools
 import itertools
 import typing
 
@@ -26,25 +25,15 @@ def persist_history(session: orm.Session, flush_context, instances):
         obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
 
-@functools.singledispatch
-def _flag_as_temporal(session_obj):
-    raise ValueError('Invalid session')
-
-
-@_flag_as_temporal.register(orm.Session)
-def _(session_obj):
-    session_obj.info[TEMPORAL_FLAG] = True
-
-
-@_flag_as_temporal.register(orm.sessionmaker)
-def _(session_obj):
-    session_obj.configure(info={TEMPORAL_FLAG: True})
-
-
 def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker]) -> orm.Session:
     if not is_temporal_session(session):
         event.listen(session, 'before_flush', persist_history)
-        _flag_as_temporal(session)
+        if isinstance(session, orm.Session):
+            session.info[TEMPORAL_FLAG] = True
+        elif isinstance(session, orm.sessionmaker):
+            session.configure(info={TEMPORAL_FLAG: True})
+        else:
+            raise ValueError('Invalid session')
 
     return session
 

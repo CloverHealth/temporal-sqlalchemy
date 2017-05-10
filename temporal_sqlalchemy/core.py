@@ -141,6 +141,9 @@ class TemporalModel(bases.Clocked):
     def __mapper_cls__(cls):
         assert hasattr(cls, 'Temporal')
 
-        event.listen(cls, 'mapper_configured', TemporalModel.temporal_map)
+        def mapper(cls, *args, **kwargs):
+            mp = orm.mapper(cls, *args, **kwargs)
+            cls.temporal_map(mp, cls)
+            return mp
 
-        return orm.mapper
+        return mapper

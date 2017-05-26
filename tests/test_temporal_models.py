@@ -1,7 +1,10 @@
 import datetime
+import re
 
 import psycopg2.extras as psql_extras
+import pytest
 import sqlalchemy as sa
+import sqlalchemy.exc as sa_exc
 
 import temporal_sqlalchemy as temporal
 
@@ -242,7 +245,8 @@ class TestTemporalModels(shared.DatabaseTest):
         with t.clock_tick():
             t.prop_a = 2
             t.prop_b = 'bar'
-            double_wrapped_session.commit()
+
+        double_wrapped_session.commit()
 
         history_tables = {
             'prop_a': temporal.get_history_model(
@@ -294,3 +298,67 @@ class TestTemporalModels(shared.DatabaseTest):
             recorded_history = clock_query.first()
             assert 1 in recorded_history.vclock
             assert getattr(t, attr) == getattr(recorded_history, attr)
+
+    def _verify_is_lower_bound_exception(self, excinfo, property_name):
+        assert re.match(
+            r'.*violates check constraint.*history_{}_check_vclock_lower_bounded.*'.format(property_name),
+            str(excinfo)
+        )
+
+    def test_disallow_history_entries_with_no_lower_bound(self, session):
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11,
+                                     tzinfo=datetime.timezone.utc))
+
+        session.add(t)
+        session.commit()
+
+        # sanity check
+        assert t.vclock == 1
+
+        # attempt to inject faulty data
+        prop_a_history = temporal.get_history_model(models.SimpleTableTemporal.prop_a)
+        clock_query = session.query(prop_a_history)
+
+        # sanity check
+        assert clock_query.count() == 1
+
+        # attempt to inject faulty data
+        recorded_history = clock_query.first()
+        recorded_history.vclock = psql_extras.NumericRange(None, 1)
+        session.add(recorded_history)
+
+        with pytest.raises(sa_exc.IntegrityError) as excinfo:
+            session.commit()
+
+        assert re.match(
+            r'.*violates check constraint.*history_prop_a_check_vclock_lower_bounded.*',
+            str(excinfo)
+        )
+
+    @pytest.mark.parametrize('session_func_name', (
+        'flush',
+        'commit'
+    ))
+    def test_disallow_flushes_within_clock_ticks(self, session, session_func_name):
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11,
+                                     tzinfo=datetime.timezone.utc))
+        session.add(t)
+        session.commit()
+
+        with t.clock_tick():
+            t.prop_a = 2
+
+            with pytest.raises(sa_exc.IntegrityError) as excinfo:
+                eval('session.{func_name}()'.format(func_name=session_func_name))
+                session.flush()
+
+            assert re.match(
+                r'.*violates check constraint.*history_prop_a_check_vclock_lower_bounded.*',
+                str(excinfo)
+            )

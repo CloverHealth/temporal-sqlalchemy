@@ -301,6 +301,10 @@ def build_history_table(
             *itertools.chain(entity_constraints, [('effective', '&&')]),
             name=truncate_identifier('%s_excl_effective' % table_name)
         ),
+        sa.CheckConstraint(
+            'LOWER(vclock) IS NOT NULL',
+            name='%s_check_vclock_lower_bounded' % table_name
+        )
     ]
 
     return sa.Table(

@@ -301,7 +301,9 @@ class TestTemporalModels(shared.DatabaseTest):
         'flush',
         'commit'
     ))
-    def test_disallow_flushes_within_clock_ticks(self, session, session_func_name):
+    def test_disallow_flushes_within_clock_ticks_when_strict(self, session, session_func_name):
+        session = temporal.temporal_session(session, strict_mode=True)
+
         t = models.SimpleTableTemporal(
             prop_a=1,
             prop_b='foo',
@@ -325,7 +327,9 @@ class TestTemporalModels(shared.DatabaseTest):
             'flush',
             'commit'
     ))
-    def test_disallow_flushes_on_changes_without_clock_ticks(self, session, session_func_name):
+    def test_disallow_flushes_on_changes_without_clock_ticks_when_strict(self, session, session_func_name):
+        session = temporal.temporal_session(session, strict_mode=True)
+
         t = models.SimpleTableTemporal(
             prop_a=1,
             prop_b='foo',
@@ -344,3 +348,27 @@ class TestTemporalModels(shared.DatabaseTest):
             r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
             str(excinfo)
         )
+
+    # TODO this test should be removed once strict flush() checking becomes the default behavior
+    @pytest.mark.parametrize('session_func_name', (
+            'flush',
+            'commit'
+    ))
+    def test_allow_loose_flushes_when_not_strict(self, session, session_func_name):
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11,
+                                     tzinfo=datetime.timezone.utc))
+        session.add(t)
+        session.commit()
+
+        with t.clock_tick():
+            t.prop_a = 2
+
+            # this should succeed in non-strict mode
+            eval('session.{func_name}()'.format(func_name=session_func_name))
+
+        # this should also succeed in non-strict mode
+        t.prop_a = 3
+        eval('session.{func_name}()'.format(func_name=session_func_name))

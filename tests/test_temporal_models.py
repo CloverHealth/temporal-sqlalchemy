@@ -1,5 +1,7 @@
 import datetime
+import re
 
+import pytest
 import psycopg2.extras as psql_extras
 import sqlalchemy as sa
 
@@ -242,7 +244,7 @@ class TestTemporalModels(shared.DatabaseTest):
         with t.clock_tick():
             t.prop_a = 2
             t.prop_b = 'bar'
-            double_wrapped_session.commit()
+        double_wrapped_session.commit()
 
         history_tables = {
             'prop_a': temporal.get_history_model(
@@ -294,3 +296,51 @@ class TestTemporalModels(shared.DatabaseTest):
             recorded_history = clock_query.first()
             assert 1 in recorded_history.vclock
             assert getattr(t, attr) == getattr(recorded_history, attr)
+
+    @pytest.mark.parametrize('session_func_name', (
+        'flush',
+        'commit'
+    ))
+    def test_disallow_flushes_within_clock_ticks(self, session, session_func_name):
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11,
+                                     tzinfo=datetime.timezone.utc))
+        session.add(t)
+        session.commit()
+
+        with t.clock_tick():
+            t.prop_a = 2
+
+            with pytest.raises(AssertionError) as excinfo:
+                eval('session.{func_name}()'.format(func_name=session_func_name))
+
+            assert re.match(
+                r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
+                str(excinfo)
+            )
+
+    @pytest.mark.parametrize('session_func_name', (
+            'flush',
+            'commit'
+    ))
+    def test_disallow_flushes_on_changes_without_clock_ticks(self, session, session_func_name):
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11,
+                                     tzinfo=datetime.timezone.utc))
+        session.add(t)
+        session.commit()
+
+        # this change should have been done within a clock tick
+        t.prop_a = 2
+
+        with pytest.raises(AssertionError) as excinfo:
+            eval('session.{func_name}()'.format(func_name=session_func_name))
+
+        assert re.match(
+            r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
+            str(excinfo)
+        )

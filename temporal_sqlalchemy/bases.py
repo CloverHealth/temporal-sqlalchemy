@@ -11,6 +11,8 @@ import sqlalchemy.orm.attributes as attributes
 import psycopg2.extras as psql_extras
 
 from temporal_sqlalchemy import nine
+from temporal_sqlalchemy.metadata import get_session_metadata
+
 
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
@@ -86,11 +88,15 @@ class ClockedOption(object):
                        timestamp: dt.datetime):
         """record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
+        vclock_history = attributes.get_history(clocked, 'vclock')
         try:
             new_tick = state.dict['vclock']
         except KeyError:
             # TODO understand why this is necessary
             new_tick = getattr(clocked, 'vclock')
+
+        is_strict_mode = get_session_metadata(session).get('strict_mode', False)
+        is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
 
         new_clock = self.make_clock(timestamp, new_tick)
         attr = {'entity': clocked}
@@ -109,6 +115,10 @@ class ClockedOption(object):
                 changes = attributes.get_history(clocked, prop.key)
 
             if changes.added:
+                if is_strict_mode:
+                    assert not is_vclock_unchanged, \
+                        'flush() has triggered for a changed temporalized property outside of a clock tick'
+
                 # Cap previous history row if exists
                 if sa.inspect(clocked).identity is not None:
                     # but only if it already exists!!

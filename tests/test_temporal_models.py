@@ -323,6 +323,28 @@ class TestTemporalModels(shared.DatabaseTest):
                 str(excinfo)
             )
 
+
+    @pytest.mark.parametrize('session_func_name', (
+        'flush',
+        'commit'
+    ))
+    def test_allow_flushes_within_clock_ticks_when_strict_but_no_change(self, session, session_func_name):
+        session = temporal.temporal_session(session, strict_mode=True)
+
+        t = models.SimpleTableTemporal(
+            prop_a=1,
+            prop_b='foo',
+            prop_c=datetime.datetime(2016, 5, 11,
+                                     tzinfo=datetime.timezone.utc))
+        session.add(t)
+        session.commit()
+
+        with t.clock_tick():
+            t.prop_a = 1
+
+        eval('session.{func_name}()'.format(func_name=session_func_name))
+
+
     @pytest.mark.parametrize('session_func_name', (
             'flush',
             'commit'

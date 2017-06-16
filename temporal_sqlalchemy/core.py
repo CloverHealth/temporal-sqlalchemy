@@ -1,4 +1,7 @@
+import uuid
+
 import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql as sap
 import sqlalchemy.ext.declarative as declarative
 import sqlalchemy.orm as orm
 import sqlalchemy.event as event
@@ -17,12 +20,16 @@ class TemporalModel(bases.Clocked):
         clock_table = sa.Table(
             clock_table_name,
             metadata,
+            sa.Column('id',
+                      sap.UUID(as_uuid=True),
+                      default=uuid.uuid4,
+                      primary_key=True),
             sa.Column('tick',
                       sa.Integer,
-                      primary_key=True,
-                      autoincrement=False),
+                      nullable=False),
             sa.Column('timestamp',
                       sa.DateTime(True),
+                      nullable=False,
                       server_default=sa.func.current_timestamp()),
             schema=schema)
 
@@ -31,6 +38,14 @@ class TemporalModel(bases.Clocked):
             # this is done to support arbitrary primary key shape on entity
             clock_table.append_column(fk)
             entity_keys.add(fk.key)
+
+        # ensure we have DB constraint on tick <> entity uniqueness
+        tick_entity_constraint_name = clock.truncate_identifier(
+            '%s_tick_entity_id_key' % clock_table_name
+        )
+        clock_table.append_constraint(
+            sa.UniqueConstraint(*(set(['tick']) | entity_keys), name=tick_entity_constraint_name)
+        )
 
         if activity_class:
             activity_keys = set()

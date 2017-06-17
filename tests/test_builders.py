@@ -1,8 +1,12 @@
+import pytest
 import sqlalchemy as sa
 
 import temporal_sqlalchemy as temporal
 from temporal_sqlalchemy.clock import (
-    build_history_table, build_history_class, build_clock_class)
+    build_history_table,
+    build_history_class,
+    build_clock_class,
+    build_clock_table)
 
 from . import models
 
@@ -43,3 +47,73 @@ def test_build_clock_class():
 
     assert clock.__name__ == 'TestingClock'
     assert issubclass(clock, temporal.EntityClock)
+
+
+@pytest.mark.parametrize('table,expected_name,expected_cols,activity_class', (
+    (
+        sa.Table(
+            'bare_table_single_pk_no_activity',
+            sa.MetaData(),
+            sa.Column('id', sa.Integer, primary_key=True),
+            sa.Column('description', sa.Text),
+            schema='bare_table_test_schema'
+        ),
+        'bare_table_single_pk_no_activity_clock',
+        {'tick', 'timestamp', 'entity_id'},
+        None
+    ),
+    (
+        sa.Table(
+            'bare_table_compositve_pk_no_activity',
+            sa.MetaData(),
+            sa.Column('num_id', sa.Integer, primary_key=True),
+            sa.Column('text_id', sa.Text, primary_key=True),
+            sa.Column('description', sa.Text),
+            schema='bare_table_test_schema'
+        ),
+        'bare_table_compositve_pk_no_activity_clock',
+        {'tick', 'timestamp', 'entity_num_id', 'entity_text_id'},
+        None
+    ),
+    (
+        sa.Table(
+            'bare_table_single_pk_with_activity',
+            sa.MetaData(),
+            sa.Column('id', sa.Integer, primary_key=True),
+            sa.Column('description', sa.Text),
+            schema='bare_table_test_schema'
+        ),
+        'bare_table_single_pk_with_activity_clock',
+        {'tick', 'timestamp', 'entity_id', 'activity_id'},
+        models.Activity
+    ),
+    (
+        sa.Table(
+            'bare_table_compositve_pk_with_activity',
+            sa.MetaData(),
+            sa.Column('num_id', sa.Integer, primary_key=True),
+            sa.Column('text_id', sa.Text, primary_key=True),
+            sa.Column('description', sa.Text),
+            schema='bare_table_test_schema'
+        ),
+        'bare_table_compositve_pk_with_activity_clock',
+        {'tick', 'timestamp', 'entity_num_id', 'entity_text_id', 'activity_id'},
+        models.Activity
+    )
+))
+def test_build_clock_table(table, expected_name, expected_cols, activity_class):
+    clock_table = build_clock_table(
+        table,
+        table.metadata,
+        table.schema,
+        activity_class
+    )
+    assert clock_table.name == expected_name
+    assert clock_table.metadata is table.metadata
+    assert {c.key for c in clock_table.c} == expected_cols
+    for foreign_key in clock_table.foreign_keys:
+        references_entity = foreign_key.references(table)
+        if activity_class:
+            assert foreign_key.references(activity_class.__table__) or references_entity
+        else:
+            assert references_entity

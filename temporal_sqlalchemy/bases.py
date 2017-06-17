@@ -13,7 +13,6 @@ import psycopg2.extras as psql_extras
 from temporal_sqlalchemy import nine
 from temporal_sqlalchemy.metadata import get_session_metadata
 
-
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
 T_PROPS = typing.TypeVar(
@@ -36,7 +35,7 @@ class TemporalProperty(object):
 
 
 class TemporalActivityMixin(object):
-    @abc.abstractproperty
+    @abc.abstractmethod
     def id(self):
         pass
 
@@ -192,6 +191,8 @@ class Clocked(object):
 
     @contextlib.contextmanager
     def clock_tick(self, activity: TemporalActivityMixin = None):
+        warnings.warn("clock_tick is going away in 0.5.0",
+                      PendingDeprecationWarning)
         """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
             raise ValueError("activity is missing on edit") from None

@@ -26,6 +26,11 @@ class EntityClock(object):
                           server_default=sa.func.current_timestamp())
 
 
+def clock_model(instance: 'Clocked') -> nine.Type(EntityClock):
+    # todo this seems like a smell :(
+    return instance.temporal_options.clock_model
+
+
 class TemporalProperty(object):
     """mixin when constructing a property history table"""
     __table__ = None  # type: sa.Table
@@ -88,12 +93,9 @@ class ClockedOption(object):
                        timestamp: dt.datetime):
         """record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
+
         vclock_history = attributes.get_history(clocked, 'vclock')
-        try:
-            new_tick = state.dict['vclock']
-        except KeyError:
-            # TODO understand why this is necessary
-            new_tick = getattr(clocked, 'vclock')
+        new_tick = clocked.current_tick.tick
 
         is_strict_mode = get_session_metadata(session).get('strict_mode', False)
         is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]

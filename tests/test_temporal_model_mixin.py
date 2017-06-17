@@ -205,12 +205,12 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         assert newstylemodel.date_created == first_tick.timestamp
 
         activity = models.Activity(description="Activity Description #2")
-        with newstylemodel.clock_tick(activity=activity):
-            newstylemodel.description = "this is new"
+        newstylemodel.activity = activity
+        newstylemodel.description = "this is new"
 
         session.commit()
 
-        second_tick = session.query(clock_model).get((1, newstylemodel.id))
+        second_tick = session.query(clock_model).get((2, newstylemodel.id))
         assert newstylemodel.vclock == 2
         assert newstylemodel.clock.count() == 2
         assert newstylemodel.date_created == first_tick.timestamp
@@ -223,11 +223,11 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         session.commit()
 
         activity = models.Activity(description="Activity Description #2")
-        with newstylemodel.clock_tick(activity=activity):
-            newstylemodel.description = "this is new"
-            newstylemodel.int_prop = 2
-            newstylemodel.bool_prop = False
-            newstylemodel.datetime_prop = datetime.datetime(2017, 2, 10)
+        newstylemodel.activity = activity
+        newstylemodel.description = "this is new"
+        newstylemodel.int_prop = 2
+        newstylemodel.bool_prop = False
+        newstylemodel.datetime_prop = datetime.datetime(2017, 2, 10)
 
         session.commit()
 

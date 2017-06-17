@@ -12,7 +12,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
     def test_temporal_options_class(self):
         options = models.SimpleConcreteChildTemporalTable.temporal_options
 
-        assert isinstance(options, temporal.TemporalOption)
+        assert isinstance(options, temporal.ClockedOption)
 
         clock_table = options.clock_table
         assert clock_table.__table__.name == "%s_clock" % (

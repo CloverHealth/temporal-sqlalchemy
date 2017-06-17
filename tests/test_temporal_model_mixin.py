@@ -24,7 +24,7 @@ def test_create_temporal_options():
 
     assert hasattr(m, 'temporal_options')
     assert m.temporal_options is models.NewStyleModel.temporal_options
-    assert isinstance(m.temporal_options, temporal.TemporalOption)
+    assert isinstance(m.temporal_options, temporal.ClockedOption)
 
 
 @pytest.mark.parametrize('table,expected_name,expected_cols,activity_class', (

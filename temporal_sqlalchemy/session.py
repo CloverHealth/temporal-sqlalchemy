@@ -5,7 +5,7 @@ import typing
 import sqlalchemy.event as event
 import sqlalchemy.orm as orm
 
-from temporal_sqlalchemy.bases import TemporalOption, Clocked
+from temporal_sqlalchemy.bases import ClockedOption, Clocked
 from temporal_sqlalchemy.metadata import (
     get_session_metadata,
     set_session_metadata
@@ -14,7 +14,7 @@ from temporal_sqlalchemy.metadata import (
 
 def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
     for obj in session:
-        if isinstance(getattr(obj, 'temporal_options', None), TemporalOption):
+        if isinstance(getattr(obj, 'temporal_options', None), ClockedOption):
             yield obj
 
 

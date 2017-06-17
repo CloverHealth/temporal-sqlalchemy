@@ -46,7 +46,7 @@ class TemporalActivityMixin(object):
         pass
 
 
-class TemporalOption(object):
+class ClockedOption(object):
     def __init__(
             self,
             history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
@@ -62,14 +62,14 @@ class TemporalOption(object):
     @property
     def clock_table(self):
         warnings.warn(
-            'use TemporalOption.clock_model instead',
+            'use ClockedOption.clock_model instead',
             PendingDeprecationWarning)
         return self.clock_model
 
     @property
     def history_tables(self):
         warnings.warn(
-            'use TemporalOption.history_models instead',
+            'use ClockedOption.history_models instead',
             PendingDeprecationWarning)
         return self.history_models
 
@@ -180,7 +180,7 @@ class Clocked(object):
     vclock = sa.Column(sa.Integer, default=1)
 
     clock = None  # type: orm.relationship
-    temporal_options = None  # type: TemporalOption
+    temporal_options = None  # type: ClockedOption
     first_tick = None  # type:  EntityClock
     latest_tick = None  # type:  EntityClock
 

@@ -2,7 +2,7 @@
 from .version import __version__
 from .bases import (
     Clocked,
-    TemporalOption,
+    ClockedOption,
     EntityClock,
     TemporalProperty,
     TemporalActivityMixin)

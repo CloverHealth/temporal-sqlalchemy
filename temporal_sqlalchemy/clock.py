@@ -16,7 +16,7 @@ from temporal_sqlalchemy import nine, util
 from temporal_sqlalchemy.bases import (
     T_PROPS,
     Clocked,
-    TemporalOption,
+    ClockedOption,
     TemporalActivityMixin,
     EntityClock,
     TemporalProperty)
@@ -173,7 +173,7 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
         )
         mapper.add_property('first_tick', first_tick)
 
-        temporal_options = TemporalOption(
+        temporal_options = ClockedOption(
             temporal_props=local_props | relationship_props,
             history_models=history_tables,
             clock_model=clock_table,

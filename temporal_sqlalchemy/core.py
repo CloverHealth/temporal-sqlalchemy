@@ -159,7 +159,7 @@ class TemporalModel(bases.Clocked):
             for p in tracked_props
         }
 
-        cls.temporal_options = bases.TemporalOption(
+        cls.temporal_options = bases.ClockedOption(
             temporal_props=tracked_props,
             history_models=history_models,
             clock_model=clock_model,

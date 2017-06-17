@@ -15,7 +15,7 @@ class TestTemporalModels(shared.DatabaseTest):
     def test_temporal_options_class(self):
         options = models.SimpleTableTemporal.temporal_options
 
-        assert isinstance(options, temporal.ClockedOption)
+        assert isinstance(options, temporal.TemporalOption)
 
         clock_table = options.clock_table
         assert (clock_table.__table__.name

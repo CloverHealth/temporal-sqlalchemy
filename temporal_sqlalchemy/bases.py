@@ -26,6 +26,11 @@ class EntityClock(object):
                           server_default=sa.func.current_timestamp())
 
 
+def clock_model(instance: 'Clocked') -> nine.Type(EntityClock):
+    # todo this seems like a smell :(
+    return instance.temporal_options.clock_model
+
+
 class TemporalProperty(object):
     """mixin when constructing a property history table"""
     __table__ = None  # type: sa.Table
@@ -41,7 +46,7 @@ class TemporalActivityMixin(object):
         pass
 
 
-class ClockedOption(object):
+class TemporalOption(object):
     def __init__(
             self,
             history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
@@ -57,14 +62,14 @@ class ClockedOption(object):
     @property
     def clock_table(self):
         warnings.warn(
-            'use ClockedOption.clock_model instead',
+            'use TemporalOption.clock_model instead',
             PendingDeprecationWarning)
         return self.clock_model
 
     @property
     def history_tables(self):
         warnings.warn(
-            'use ClockedOption.history_models instead',
+            'use TemporalOption.history_models instead',
             PendingDeprecationWarning)
         return self.history_models
 
@@ -88,12 +93,9 @@ class ClockedOption(object):
                        timestamp: dt.datetime):
         """record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
+
         vclock_history = attributes.get_history(clocked, 'vclock')
-        try:
-            new_tick = state.dict['vclock']
-        except KeyError:
-            # TODO understand why this is necessary
-            new_tick = getattr(clocked, 'vclock')
+        new_tick = clocked.current_tick.tick
 
         is_strict_mode = get_session_metadata(session).get('strict_mode', False)
         is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
@@ -178,7 +180,7 @@ class Clocked(object):
     vclock = sa.Column(sa.Integer, default=1)
 
     clock = None  # type: orm.relationship
-    temporal_options = None  # type: ClockedOption
+    temporal_options = None  # type: TemporalOption
     first_tick = None  # type:  EntityClock
     latest_tick = None  # type:  EntityClock
 

@@ -6,6 +6,42 @@ import sqlalchemy.event as event
 from temporal_sqlalchemy import bases, clock, util
 
 
+class ActivityState:
+    def __set__(self, instance, value):
+        setattr(instance, '_current_activity', value)
+
+        if value:
+            current_tick = instance.current_tick
+            current_tick.activity = value
+
+    def __get__(self, instance, owner):
+        if not instance:
+            return None
+
+        return getattr(instance, '_current_activity')
+
+
+class ClockState:
+    def __set__(self, instance, value):
+        setattr(instance, '_current_tick', value)
+
+    def __get__(self, instance: bases.Clocked, owner):
+        if not instance:
+            return None
+
+        vclock = getattr(instance, 'vclock') or 0
+
+        if not getattr(instance, '_current_tick', None):
+            new_version = vclock + 1
+            instance.vclock = new_version
+            clock_tick = instance.temporal_options.clock_model(tick=new_version)
+            clock_tick = bases.clock_model(instance)(tick=new_version)
+            instance.current_tick = clock_tick
+            instance.clock.append(clock_tick)
+
+        return getattr(instance, '_current_tick')
+
+
 class TemporalModel(bases.Clocked):
     @staticmethod
     def build_clock_table(entity_table: sa.Table,
@@ -107,6 +143,12 @@ class TemporalModel(bases.Clocked):
             backref_name = '%s_clock' % entity_table.name
             clock_properties['activity'] = \
                 orm.relationship(lambda: activity_class, backref=backref_name)
+            cls.activity = ActivityState()
+
+            def reset_activity(target, attr):
+                target.activity = None
+
+            event.listen(cls, 'expire', reset_activity)
 
         clock_model = clock.build_clock_class(cls.__name__,
                                               entity_table.metadata,
@@ -117,33 +159,26 @@ class TemporalModel(bases.Clocked):
             for p in tracked_props
         }
 
-        cls.temporal_options = bases.ClockedOption(
+        cls.temporal_options = bases.TemporalOption(
             temporal_props=tracked_props,
             history_models=history_models,
             clock_model=clock_model,
             activity_cls=activity_class
         )
+        cls.current_tick = ClockState()
 
-        event.listen(cls, 'init', TemporalModel.init_clock)
+        def reset_tick(target, attr):
+            target.current_tick = None
 
-    @staticmethod
-    def init_clock(clocked: 'TemporalModel', args, kwargs):
-        kwargs.setdefault('vclock', 1)
-        initial_tick = clocked.temporal_options.clock_model(
-            tick=kwargs['vclock'],
-            entity=clocked,
-        )
-
-        if 'activity' in kwargs:
-            initial_tick.activity = kwargs.pop('activity')
+        event.listen(cls, 'expire', reset_tick)
 
     @declarative.declared_attr
     def __mapper_cls__(cls):
         assert hasattr(cls, 'Temporal')
 
-        def mapper(cls, *args, **kwargs):
-            mp = orm.mapper(cls, *args, **kwargs)
-            cls.temporal_map(mp, cls)
+        def mapper(cls_, *args, **kwargs):
+            mp = orm.mapper(cls_, *args, **kwargs)
+            cls.temporal_map(mp, cls_)
             return mp
 
         return mapper

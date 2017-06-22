@@ -3,9 +3,11 @@ import collections
 import contextlib
 import datetime as dt
 import typing
+import uuid
 import warnings
 
 import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql as sap
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
 import psycopg2.extras as psql_extras
@@ -21,9 +23,9 @@ T_PROPS = typing.TypeVar(
 
 
 class EntityClock(object):
-    tick = sa.Column(sa.Integer, primary_key=True, autoincrement=False)
-    timestamp = sa.Column(sa.DateTime(True),
-                          server_default=sa.func.current_timestamp())
+    id = sa.Column(sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
+    tick = sa.Column(sa.Integer, nullable=False)
+    timestamp = sa.Column(sa.DateTime(True), server_default=sa.func.current_timestamp())
 
 
 class TemporalProperty(object):

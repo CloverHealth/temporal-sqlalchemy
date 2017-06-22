@@ -131,11 +131,19 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
 
         clock_properties = dict(
             __tablename__=clock_table_name,
-            # todo support different shape PKs
-            entity_id=sa.Column(sa.ForeignKey(cls.id), primary_key=True),
+
+            entity_id=sa.Column(sa.ForeignKey(cls.id), nullable=False),
             entity=orm.relationship(
                 cls, backref=orm.backref("clock", lazy='dynamic')),
         )
+
+        tick_entity_constraint_name = truncate_identifier(
+            '%s_tick_entity_id_key' % clock_table_name
+        )
+        table_args = [
+            sa.UniqueConstraint('tick', 'entity_id',
+                                name=tick_entity_constraint_name)
+        ]
 
         if activity_cls is not None:
             backref_name = '%s_clock' % entity_table_name
@@ -143,12 +151,10 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
                 sa.ForeignKey(activity_cls.id), nullable=False)
             clock_properties['activity'] = orm.relationship(
                 activity_cls, backref=backref_name)
-            clock_properties['__table_args__'] = (
-                sa.UniqueConstraint('entity_id', 'activity_id'),
-                {'schema': schema}
-            )
-        else:
-            clock_properties['__table_args__'] = {'schema': schema}
+            table_args.append(sa.UniqueConstraint('entity_id', 'activity_id'))
+
+        table_args.append({'schema': schema})
+        clock_properties['__table_args__'] = tuple(table_args)
 
         clock_table = build_clock_class(
             cls.__name__, cls.metadata, clock_properties)

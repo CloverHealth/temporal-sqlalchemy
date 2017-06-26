@@ -1,5 +1,6 @@
 import pytest
 import sqlalchemy as sa
+from sqlalchemy.inspection import inspect as sa_inspect
 
 import temporal_sqlalchemy as temporal
 from temporal_sqlalchemy.clock import (
@@ -7,6 +8,7 @@ from temporal_sqlalchemy.clock import (
     build_history_class,
     build_clock_class,
     build_clock_table)
+from temporal_sqlalchemy.core import TemporalModel
 
 from . import models
 
@@ -41,12 +43,26 @@ def test_build_history_class():
     assert hasattr(rel_id_prop_class, 'entity')
 
 
+def test_build_clock_table():
+    clock_table = TemporalModel.build_clock_table(
+        models.RelationalTemporalModel.__table__,
+        sa.MetaData(),
+        models.TEMPORAL_SCHEMA
+    )
+
+    assert clock_table.name == 'relational_temporal_clock'
+    assert clock_table.schema == models.TEMPORAL_SCHEMA
+    assert clock_table.c.keys() == ['id', 'tick', 'timestamp', 'entity_id']
+
+
 def test_build_clock_class():
     clock = build_clock_class(
         'Testing', sa.MetaData(), {'__tablename__': 'test'})
 
     assert clock.__name__ == 'TestingClock'
     assert issubclass(clock, temporal.EntityClock)
+    actual_primary_keys = [k.name for k in sa_inspect(clock).primary_key]
+    assert actual_primary_keys == ['id']
 
 
 @pytest.mark.parametrize('table,expected_name,expected_cols,activity_class', (
@@ -59,7 +75,7 @@ def test_build_clock_class():
             schema='bare_table_test_schema'
         ),
         'bare_table_single_pk_no_activity_clock',
-        {'tick', 'timestamp', 'entity_id'},
+        {'id', 'tick', 'timestamp', 'entity_id'},
         None
     ),
     (
@@ -72,7 +88,7 @@ def test_build_clock_class():
             schema='bare_table_test_schema'
         ),
         'bare_table_compositve_pk_no_activity_clock',
-        {'tick', 'timestamp', 'entity_num_id', 'entity_text_id'},
+        {'id', 'tick', 'timestamp', 'entity_num_id', 'entity_text_id'},
         None
     ),
     (
@@ -84,7 +100,7 @@ def test_build_clock_class():
             schema='bare_table_test_schema'
         ),
         'bare_table_single_pk_with_activity_clock',
-        {'tick', 'timestamp', 'entity_id', 'activity_id'},
+        {'id', 'tick', 'timestamp', 'entity_id', 'activity_id'},
         models.Activity
     ),
     (
@@ -97,7 +113,7 @@ def test_build_clock_class():
             schema='bare_table_test_schema'
         ),
         'bare_table_compositve_pk_with_activity_clock',
-        {'tick', 'timestamp', 'entity_num_id', 'entity_text_id', 'activity_id'},
+        {'id', 'tick', 'timestamp', 'entity_num_id', 'entity_text_id', 'activity_id'},
         models.Activity
     )
 ))

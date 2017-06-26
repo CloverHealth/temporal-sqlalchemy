@@ -2,6 +2,7 @@ import datetime
 
 import pytest
 import sqlalchemy as sa
+import sqlalchemy.exc as sa_exc
 import temporal_sqlalchemy as temporal
 
 from . import shared, models
@@ -119,7 +120,7 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         session.add(newstylemodel)
         session.commit()
 
-        tick = session.query(clock_model).get((1, newstylemodel.id))
+        tick = session.query(clock_model).filter_by(tick=1, entity_id=newstylemodel.id).one()
         assert newstylemodel.vclock == 1
         assert newstylemodel.clock.count() == 1
         assert newstylemodel.date_created == tick.timestamp
@@ -129,7 +130,7 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         session.add(newstylemodel)
         session.commit()
 
-        first_tick = session.query(clock_model).get((1, newstylemodel.id))
+        first_tick = session.query(clock_model).filter_by(tick=1, entity_id=newstylemodel.id).one()
         assert newstylemodel.vclock == 1
         assert newstylemodel.clock.count() == 1
         assert newstylemodel.date_created == first_tick.timestamp
@@ -140,7 +141,7 @@ class TestTemporalModelMixin(shared.DatabaseTest):
 
         session.commit()
 
-        second_tick = session.query(clock_model).get((1, newstylemodel.id))
+        second_tick = session.query(clock_model).filter_by(tick=1, entity_id=newstylemodel.id).one()
         assert newstylemodel.vclock == 2
         assert newstylemodel.clock.count() == 2
         assert newstylemodel.date_created == first_tick.timestamp
@@ -187,3 +188,19 @@ class TestTemporalModelMixin(shared.DatabaseTest):
                 session.query(history_model)
                 .order_by(history_model.vclock.desc()).first())
             assert clock.tick in history.vclock
+
+    def test_disallaw_same_tick_for_same_entity(self, session, newstylemodel):
+        clock_model = models.NewStyleModel.temporal_options.clock_model
+
+        session.add(newstylemodel)
+        session.commit()
+
+        first_tick = session.query(clock_model).first()
+        duplicate_tick = clock_model(
+            tick=first_tick.tick,
+            entity_id=first_tick.entity_id,
+            activity=models.Activity(description="Inserting a duplicate"),
+        )
+        session.add(duplicate_tick)
+        with pytest.raises(sa_exc.IntegrityError):
+            session.commit()

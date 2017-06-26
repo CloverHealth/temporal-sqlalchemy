@@ -189,9 +189,12 @@ def build_clock_table(entity_table: sa.Table,
     clock_table = sa.Table(
         clock_table_name,
         metadata,
+        sa.Column('id',
+                  sap.UUID(as_uuid=True),
+                  default=uuid.uuid4,
+                  primary_key=True),
         sa.Column('tick',
                   sa.Integer,
-                  primary_key=True,
                   autoincrement=False),
         sa.Column('timestamp',
                   sa.DateTime(True),
@@ -199,10 +202,18 @@ def build_clock_table(entity_table: sa.Table,
         schema=schema)
 
     entity_keys = set()
-    for fk in util.foreign_key_to(entity_table, primary_key=True):
+    for fk in util.foreign_key_to(entity_table):
         # this is done to support arbitrary primary key shape on entity
         clock_table.append_column(fk)
         entity_keys.add(fk.key)
+
+    tick_entity_unique_name = util.truncate_identifier(
+        '%s_tick_entity_id_key' % clock_table_name
+    )
+    clock_table.append_constraint(
+        sa.UniqueConstraint(*(entity_keys | {'tick'}),
+                            name=tick_entity_unique_name)
+    )
 
     if activity_class:
         activity_keys = set()

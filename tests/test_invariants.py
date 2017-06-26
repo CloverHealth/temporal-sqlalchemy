@@ -65,24 +65,3 @@ def test_fails_with_server_onupdate():
             prop_b = sa.Column(sap.TEXT)
             prop_c = sa.Column(sa.DateTime,
                                server_onupdate=sa.func.current_timestamp())
-
-
-def test_fails_on_bad_relation_info():
-    class RelatedFail(models.ExpectedFailBase):
-        __tablename__ = 'related_fail'
-        __table_args__ = {'schema': models.SCHEMA}
-
-        id = models.auto_uuid()
-        prop_a = sa.Column(sa.Integer)
-
-    with pytest.raises(AssertionError):
-        @temporal.add_clock('prop_a', 'related_fail_id')
-        class ParentRelatedFail(temporal.Clocked, models.ExpectedFailBase):
-            __tablename__ = 'related_fail_parent'
-            __table_args__ = {'schema': models.SCHEMA}
-
-            id = models.auto_uuid()
-            prop_a = sa.Column(sa.Integer)
-            related_fail_id = sa.Column(sa.ForeignKey(RelatedFail.id))
-            related_fail = orm.relationship(RelatedFail, info={
-                'temporal_on': 'related_id'})

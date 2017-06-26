@@ -97,7 +97,7 @@ class RelatedTable(Base):
 
 
 @temporal_sqlalchemy.add_clock(
-    'prop_a', 'prop_b', 'rel_id', temporal_schema=TEMPORAL_SCHEMA)
+    'prop_a', 'prop_b', 'rel_id', 'rel', temporal_schema=TEMPORAL_SCHEMA)
 class RelationalTemporalModel(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'relational_temporal'
     __table_args__ = {'schema': SCHEMA}
@@ -106,7 +106,7 @@ class RelationalTemporalModel(temporal_sqlalchemy.Clocked, Base):
     prop_a = sa.Column(sa.Integer)
     prop_b = sa.Column(sap.TEXT)
     rel_id = sa.Column(sa.ForeignKey(RelatedTable.id))
-    rel = orm.relationship(RelatedTable, info={'temporal_on': 'rel_id'})
+    rel = orm.relationship(RelatedTable)
 
 
 class Activity(temporal_sqlalchemy.TemporalActivityMixin, Base):
@@ -148,7 +148,7 @@ class SimpleTable(Base):
     prop_a = sa.Column(sa.Integer)
     prop_b = sa.Column(sap.TEXT)
     rel_id = sa.Column(sa.ForeignKey(RelatedTable.id))
-    rel = orm.relationship(RelatedTable, info={'temporal_on': 'rel_id'})
+    rel = orm.relationship(RelatedTable)
 
 
 REALLY_REALLY = 'really_' * 5

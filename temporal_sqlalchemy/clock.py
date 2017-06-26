@@ -98,23 +98,24 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None, schema=None):
     event.listen(cls, 'init', init_clock)
 
 
-def init_clock(clocked: Clocked, args, kwargs):
+def init_clock(obj: Clocked, args, kwargs):
     kwargs.setdefault('vclock', 1)
-    initial_tick = clocked.temporal_options.clock_model(
+    initial_tick = obj.temporal_options.clock_model(
         tick=kwargs['vclock'],
-        entity=clocked,
+        entity=obj,
     )
 
-    if clocked.temporal_options.activity_cls and 'activity' not in kwargs:
-        raise ValueError("%r missing keyword argument: activity" % clocked.__class__)
+    if obj.temporal_options.activity_cls and 'activity' not in kwargs:
+        raise ValueError(
+            "%r missing keyword argument: activity" % obj.__class__)
 
     if 'activity' in kwargs:
         initial_tick.activity = kwargs.pop('activity')
 
-    materialize_defaults(clocked, kwargs)
+    materialize_defaults(obj, kwargs)
 
 
-def materialize_defaults(clocked, kwargs):
+def materialize_defaults(obj: Clocked, kwargs):
     """Add the first clock tick when initializing.
             Note: Special case for non-server side defaults"""
     # Note this block is because sqlalchemy doesn't materialize default
@@ -123,45 +124,30 @@ def materialize_defaults(clocked, kwargs):
     warnings.warn("this method is unnecessary with recent sqlalchemy changes",
                   PendingDeprecationWarning)
     to_materialize = {
-        prop for prop
-        in clocked.temporal_options.history_tables.keys()
+        prop for prop in obj.temporal_options.history_models.keys()
         if prop.key not in kwargs
-           and getattr(prop.class_attribute, 'default', None) is not None}
+        and getattr(prop.class_attribute, 'default', None) is not None
+    }
     for prop in to_materialize:
         if callable(prop.class_attribute.default.arg):
-            value = prop.class_attribute.default.arg(clocked)
+            value = prop.class_attribute.default.arg(obj)
         else:
             value = prop.class_attribute.default.arg
-        setattr(clocked, prop.key, value)
+        setattr(obj, prop.key, value)
 
 
 def defaults_safety(*track, mapper):
     warnings.warn("these caveats are temporary", PendingDeprecationWarning)
     local_props = {mapper.get_property(prop) for prop in track}
     for prop in local_props:
+        if isinstance(prop, orm.RelationshipProperty):
+            continue
         assert all(col.onupdate is None for col in prop.columns), \
             '%r has onupdate' % prop
         assert all(col.server_default is None for col in prop.columns), \
             '%r has server_default' % prop
         assert all(col.server_onupdate is None for col in prop.columns), \
             '%r has server_onupdate' % prop
-
-
-def relationship_safety(mapper):
-    warnings.warn("these caveats are temporary", PendingDeprecationWarning)
-    cls = mapper.class_
-    relationship_props = set()
-    for prop in mapper.relationships:
-        if 'temporal_on' in prop.info:
-            assert hasattr(cls, prop.info['temporal_on']), \
-                '%r is missing a property %s' % (
-                    cls, prop.info['temporal_on'])
-            assert isinstance(
-                mapper.get_property(prop.info['temporal_on']),
-                orm.ColumnProperty), \
-                '%r has %s but it is not a Column' % (
-                    cls, prop.info['temporal_on'])
-            relationship_props.add(prop)
 
 
 # TODO kwargs to override default clock table and history tables prefix
@@ -174,7 +160,6 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
         assert issubclass(cls, Clocked), "add temporal.Clocked to %r" % cls
         mapper = cls.__mapper__
         defaults_safety(*props, mapper=mapper)
-        relationship_safety(mapper)
         temporal_map(*props,
                      mapper=mapper,
                      activity_class=activity_cls,

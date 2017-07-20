@@ -15,7 +15,6 @@ import psycopg2.extras as psql_extras
 from temporal_sqlalchemy import nine
 from temporal_sqlalchemy.metadata import get_session_metadata
 
-
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
 T_PROPS = typing.TypeVar(
@@ -25,7 +24,8 @@ T_PROPS = typing.TypeVar(
 class EntityClock(object):
     id = sa.Column(sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     tick = sa.Column(sa.Integer, nullable=False)
-    timestamp = sa.Column(sa.DateTime(True), server_default=sa.func.current_timestamp())
+    timestamp = sa.Column(sa.DateTime(True),
+                          server_default=sa.func.current_timestamp())
 
 
 class TemporalProperty(object):
@@ -38,12 +38,12 @@ class TemporalProperty(object):
 
 
 class TemporalActivityMixin(object):
-    @abc.abstractproperty
+    @abc.abstractmethod
     def id(self):
         pass
 
 
-class ClockedOption(object):
+class TemporalOption(object):
     def __init__(
             self,
             history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
@@ -59,14 +59,14 @@ class ClockedOption(object):
     @property
     def clock_table(self):
         warnings.warn(
-            'use ClockedOption.clock_model instead',
+            'use TemporalOption.clock_model instead',
             PendingDeprecationWarning)
         return self.clock_model
 
     @property
     def history_tables(self):
         warnings.warn(
-            'use ClockedOption.history_models instead',
+            'use TemporalOption.history_models instead',
             PendingDeprecationWarning)
         return self.history_models
 
@@ -180,7 +180,7 @@ class Clocked(object):
     vclock = sa.Column(sa.Integer, default=1)
 
     clock = None  # type: orm.relationship
-    temporal_options = None  # type: ClockedOption
+    temporal_options = None  # type: TemporalOption
     first_tick = None  # type:  EntityClock
     latest_tick = None  # type:  EntityClock
 
@@ -194,6 +194,8 @@ class Clocked(object):
 
     @contextlib.contextmanager
     def clock_tick(self, activity: TemporalActivityMixin = None):
+        warnings.warn("clock_tick is going away in 0.5.0",
+                      PendingDeprecationWarning)
         """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
             raise ValueError("activity is missing on edit") from None

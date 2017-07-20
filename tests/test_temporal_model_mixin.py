@@ -21,81 +21,11 @@ def test_declaration_check():
 def test_create_temporal_options():
     assert hasattr(models.NewStyleModel, 'temporal_options')
 
-    m = models.NewStyleModel()
+    m = models.NewStyleModel(activity=models.Activity(description="Activity Description"))
 
     assert hasattr(m, 'temporal_options')
     assert m.temporal_options is models.NewStyleModel.temporal_options
-    assert isinstance(m.temporal_options, temporal.ClockedOption)
-
-
-@pytest.mark.parametrize('table,expected_name,expected_cols,activity_class', (
-    (
-        sa.Table(
-            'bare_table_single_pk_no_activity',
-            sa.MetaData(),
-            sa.Column('id', sa.Integer, primary_key=True),
-            sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
-        ),
-        'bare_table_single_pk_no_activity_clock',
-        {'id', 'tick', 'timestamp', 'entity_id'},
-        None
-    ),
-    (
-        sa.Table(
-            'bare_table_compositve_pk_no_activity',
-            sa.MetaData(),
-            sa.Column('num_id', sa.Integer, primary_key=True),
-            sa.Column('text_id', sa.Text, primary_key=True),
-            sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
-        ),
-        'bare_table_compositve_pk_no_activity_clock',
-        {'id', 'tick', 'timestamp', 'entity_num_id', 'entity_text_id'},
-        None
-    ),
-    (
-        sa.Table(
-            'bare_table_single_pk_with_activity',
-            sa.MetaData(),
-            sa.Column('id', sa.Integer, primary_key=True),
-            sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
-        ),
-        'bare_table_single_pk_with_activity_clock',
-        {'id', 'tick', 'timestamp', 'entity_id', 'activity_id'},
-        models.Activity
-    ),
-    (
-        sa.Table(
-            'bare_table_compositve_pk_with_activity',
-            sa.MetaData(),
-            sa.Column('num_id', sa.Integer, primary_key=True),
-            sa.Column('text_id', sa.Text, primary_key=True),
-            sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
-        ),
-        'bare_table_compositve_pk_with_activity_clock',
-        {'id', 'tick', 'timestamp', 'entity_num_id', 'entity_text_id', 'activity_id'},
-        models.Activity
-    )
-))
-def test_build_clock_table(table, expected_name, expected_cols, activity_class):
-    clock_table = temporal.TemporalModel.build_clock_table(
-        table,
-        table.metadata,
-        table.schema,
-        activity_class
-    )
-    assert clock_table.name == expected_name
-    assert clock_table.metadata is table.metadata
-    assert {c.key for c in clock_table.c} == expected_cols
-    for foreign_key in clock_table.foreign_keys:
-        references_entity = foreign_key.references(table)
-        if activity_class:
-            assert foreign_key.references(activity_class.__table__) or references_entity
-        else:
-            assert references_entity
+    assert isinstance(m.temporal_options, temporal.TemporalOption)
 
 
 def test_creates_clock_model():

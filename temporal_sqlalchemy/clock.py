@@ -269,7 +269,11 @@ def _exclusion_in(type_, name) -> typing.Tuple:
 
 
 @_exclusion_in.register(sap.UUID)
-def _(type_, name):
+def _exclusion_in_uuid(type_, name):
+    """
+    Cast UUIDs to text for our exclusion index because postgres doesn't
+    currently allow GiST indices on UUIDs.
+    """
     return sa.cast(sa.text(name), sap.TEXT), '='
 
 
@@ -287,7 +291,9 @@ def build_history_table(
     table_name = truncate_identifier(
         _generate_history_table_name(local_table, columns)
     )
-    entity_foreign_keys = list(util.foreign_key_to(local_table))
+    # Build the foreign key(s), specifically adding an index since we may use
+    # a casted foreign key in our constraints. See _exclusion_in_uuid
+    entity_foreign_keys = list(util.foreign_key_to(local_table, index=True))
     entity_constraints = [
         _exclusion_in(fk.type, fk.key)
         for fk in entity_foreign_keys

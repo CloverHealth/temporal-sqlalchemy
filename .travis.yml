@@ -38,10 +38,6 @@ matrix:
       addons:
         postgresql: 9.5
       env: PG=9.5
-    - python: 3.3
-      addons:
-        postgresql: 9.5
-      env: PG=9.5
 
 script: python setup.py test
 

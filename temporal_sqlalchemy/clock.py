@@ -205,6 +205,8 @@ def build_clock_table(entity_table: sa.Table,
     entity_keys = set()
     for fk in util.foreign_key_to(entity_table, nullable=False):
         # this is done to support arbitrary primary key shape on entity
+        # We don't add additional indices on the foreign keys here because
+        # the uniqueness constraints will add an implicit index.
         clock_table.append_column(fk)
         entity_keys.add(fk.key)
 
@@ -274,7 +276,11 @@ def _exclusion_in(type_, name) -> typing.Tuple:
 
 
 @_exclusion_in.register(sap.UUID)
-def _(type_, name):
+def _exclusion_in_uuid(type_, name):
+    """
+    Cast UUIDs to text for our exclusion index because postgres doesn't
+    currently allow GiST indices on UUIDs.
+    """
     return sa.cast(sa.text(name), sap.TEXT), '='
 
 
@@ -292,7 +298,9 @@ def build_history_table(
     table_name = util.truncate_identifier(
         _generate_history_table_name(local_table, columns)
     )
-    entity_foreign_keys = list(util.foreign_key_to(local_table))
+    # Build the foreign key(s), specifically adding an index since we may use
+    # a casted foreign key in our constraints. See _exclusion_in_uuid
+    entity_foreign_keys = list(util.foreign_key_to(local_table, index=True))
     entity_constraints = [
         _exclusion_in(fk.type, fk.key)
         for fk in entity_foreign_keys

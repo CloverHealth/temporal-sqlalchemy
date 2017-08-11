@@ -202,31 +202,31 @@ def build_clock_table(entity_table: sa.Table,
                   server_default=sa.func.current_timestamp()),
         schema=schema)
 
-    entity_keys = set()
+    entity_keys = list()
     for fk in util.foreign_key_to(entity_table, nullable=False):
         # this is done to support arbitrary primary key shape on entity
         clock_table.append_column(fk)
-        entity_keys.add(fk.key)
+        entity_keys.append(fk.key)
 
     tick_entity_unique_name = util.truncate_identifier(
         '%s_tick_entity_id_key' % clock_table_name
     )
     clock_table.append_constraint(
-        sa.UniqueConstraint(*(entity_keys | {'tick'}),
+        sa.UniqueConstraint(*(entity_keys + ['tick']),
                             name=tick_entity_unique_name)
     )
 
     if activity_class:
-        activity_keys = set()
+        activity_keys = list()
         # support arbitrary shaped activity primary keys
         for fk in util.foreign_key_to(activity_class.__table__,
                                       prefix='activity',
                                       nullable=False):
             clock_table.append_column(fk)
-            activity_keys.add(fk.key)
+            activity_keys.append(fk.key)
         # ensure we have DB constraint on clock <> activity uniqueness
         clock_table.append_constraint(
-            sa.UniqueConstraint(*(activity_keys | entity_keys))
+            sa.UniqueConstraint(*(entity_keys + activity_keys))
         )
 
     return clock_table

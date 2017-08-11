@@ -195,6 +195,7 @@ def build_clock_table(entity_table: sa.Table,
                   primary_key=True),
         sa.Column('tick',
                   sa.Integer,
+                  nullable=False,
                   autoincrement=False),
         sa.Column('timestamp',
                   sa.DateTime(True),
@@ -202,7 +203,7 @@ def build_clock_table(entity_table: sa.Table,
         schema=schema)
 
     entity_keys = set()
-    for fk in util.foreign_key_to(entity_table):
+    for fk in util.foreign_key_to(entity_table, nullable=False):
         # this is done to support arbitrary primary key shape on entity
         # We don't add additional indices on the foreign keys here because
         # the uniqueness constraints will add an implicit index.
@@ -227,7 +228,7 @@ def build_clock_table(entity_table: sa.Table,
             activity_keys.add(fk.key)
         # ensure we have DB constraint on clock <> activity uniqueness
         clock_table.append_constraint(
-            sa.UniqueConstraint(*(entity_keys | activity_keys))
+            sa.UniqueConstraint(*(activity_keys | entity_keys))
         )
 
     return clock_table

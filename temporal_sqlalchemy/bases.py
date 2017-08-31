@@ -8,17 +8,72 @@ import warnings
 
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as sap
+import sqlalchemy.event as event
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.attributes as attributes
 import psycopg2.extras as psql_extras
 
 from temporal_sqlalchemy import nine
-from temporal_sqlalchemy.metadata import get_session_metadata
 
-_ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
+_PersistentClockPair = collections.namedtuple('_PersistentClockPairssssss',
+                                              ('effective', 'vclock'))
 
 T_PROPS = typing.TypeVar(
     'T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
+
+
+class ActivityState:
+    def __set__(self, instance, value):
+        assert instance.temporal_options.activity_cls, "Make this better Joey"
+        setattr(instance, '_current_activity', value)
+
+        if value:
+            current_tick = instance.current_tick
+            current_tick.activity = value
+
+    def __get__(self, instance, owner):
+        if not instance:
+            return None
+
+        return getattr(instance, '_current_activity')
+
+    @staticmethod
+    def reset_activity(target, attr):
+        target.activity = None
+
+    @staticmethod
+    def activity_required(target, key, value):
+        # TODO this doesn't work yet!
+        if not target.activity:
+            raise ValueError("activity required")
+
+
+class ClockState:
+
+    def __set__(self, instance, value):
+        setattr(instance, '_current_tick', value)
+
+    def __get__(self, instance, owner):
+        if not instance:
+            return None
+        vclock = getattr(instance, 'vclock') or 0
+
+        if not getattr(instance, '_current_tick', None):
+            new_version = vclock + 1
+            instance.vclock = new_version
+            clock_tick = instance.temporal_options.clock_model(tick=new_version)
+            instance.current_tick = clock_tick
+            instance.clock.append(clock_tick)
+
+        return getattr(instance, '_current_tick')
+
+    @staticmethod
+    def reset_tick(target, attr):
+        target.current_tick = None
+
+    @staticmethod
+    def start_clock(target, args, kwargs):
+        kwargs.setdefault('vclock', target.current_tick.tick)
 
 
 class EntityClock(object):
@@ -50,11 +105,27 @@ class TemporalOption(object):
             temporal_props: typing.Iterable[T_PROPS],
             clock_model: nine.Type[EntityClock],
             activity_cls: nine.Type[TemporalActivityMixin] = None):
+
         self.history_models = history_models
         self.temporal_props = temporal_props
 
         self.clock_model = clock_model
         self.activity_cls = activity_cls
+        self.model = None
+
+    def bind(self, model: 'Clocked'):
+        # TODO this method smells
+        self.model = model
+
+        event.listen(model, 'expire', ClockState.reset_tick)
+        event.listen(model, 'init', ClockState.start_clock)
+
+        if self.activity_cls:
+            # TODO fix this
+            orm.validates(*{prop.key for prop in self.temporal_props},
+                          include_removes=True)(ActivityState.activity_required)
+
+            event.listen(model, 'expire', ActivityState.reset_activity)
 
     @property
     def clock_table(self):
@@ -73,7 +144,7 @@ class TemporalOption(object):
     @staticmethod
     def make_clock(effective_lower: dt.datetime,
                    vclock_lower: int,
-                   **kwargs) -> _ClockSet:
+                   **kwargs) -> _PersistentClockPair:
         """construct a clock set tuple"""
         effective_upper = kwargs.get('effective_upper', None)
         vclock_upper = kwargs.get('vclock_upper', None)
@@ -82,7 +153,7 @@ class TemporalOption(object):
             effective_lower, effective_upper)
         vclock = psql_extras.NumericRange(vclock_lower, vclock_upper)
 
-        return _ClockSet(effective, vclock)
+        return _PersistentClockPair(effective, vclock)
 
     def record_history(self,
                        clocked: 'Clocked',
@@ -90,17 +161,8 @@ class TemporalOption(object):
                        timestamp: dt.datetime):
         """record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
-        vclock_history = attributes.get_history(clocked, 'vclock')
-        try:
-            new_tick = state.dict['vclock']
-        except KeyError:
-            # TODO understand why this is necessary
-            new_tick = getattr(clocked, 'vclock')
 
-        is_strict_mode = get_session_metadata(session).get('strict_mode', False)
-        is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
-
-        new_clock = self.make_clock(timestamp, new_tick)
+        new_clock = self.make_clock(timestamp, clocked.current_clock.tick)
         attr = {'entity': clocked}
 
         for prop, cls in self.history_models.items():
@@ -111,16 +173,13 @@ class TemporalOption(object):
 
             if isinstance(prop, orm.RelationshipProperty):
                 changes = attributes.get_history(
-                    clocked, prop.key,
+                    clocked,
+                    prop.key,
                     passive=attributes.PASSIVE_NO_INITIALIZE)
             else:
                 changes = attributes.get_history(clocked, prop.key)
 
             if changes.added:
-                if is_strict_mode:
-                    assert not is_vclock_unchanged, \
-                        'flush() has triggered for a changed temporalized property outside of a clock tick'
-
                 # Cap previous history row if exists
                 if sa.inspect(clocked).identity is not None:
                     # but only if it already exists!!
@@ -194,22 +253,13 @@ class Clocked(object):
 
     @contextlib.contextmanager
     def clock_tick(self, activity: TemporalActivityMixin = None):
-        warnings.warn("clock_tick is going away in 0.5.0",
-                      PendingDeprecationWarning)
-        """Increments vclock by 1 with changes scoped to the session"""
-        if self.temporal_options.activity_cls is not None and activity is None:
-            raise ValueError("activity is missing on edit") from None
+        warnings.warn("clock_tick is deprecated, assign an activity directly",
+                      DeprecationWarning)
+        self.activity = activity
 
-        session = orm.object_session(self)
-        with session.no_autoflush:
-            yield self
+        yield self
 
-        if session.is_modified(self):
-            self.vclock += 1
+        return
 
-            new_clock_tick = self.temporal_options.clock_model(
-                entity=self, tick=self.vclock)
-            if activity is not None:
-                new_clock_tick.activity = activity
-
-            session.add(new_clock_tick)
+    activity = ActivityState()
+    current_clock = ClockState()

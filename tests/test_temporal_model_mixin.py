@@ -154,11 +154,11 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         session.commit()
 
         activity = models.Activity(description="Activity Description #2")
-        with newstylemodel.clock_tick(activity=activity):
-            newstylemodel.description = "this is new"
-            newstylemodel.int_prop = 2
-            newstylemodel.bool_prop = False
-            newstylemodel.datetime_prop = datetime.datetime(2017, 2, 10)
+        newstylemodel.activity = activity
+        newstylemodel.description = "this is new"
+        newstylemodel.int_prop = 2
+        newstylemodel.bool_prop = False
+        newstylemodel.datetime_prop = datetime.datetime(2017, 2, 10)
 
         session.commit()
 

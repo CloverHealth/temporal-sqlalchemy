@@ -12,6 +12,8 @@ import sqlalchemy.orm as orm
 from temporal_sqlalchemy import nine, util
 from temporal_sqlalchemy.bases import (
     T_PROPS,
+    ClockState,
+    ActivityState,
     Clocked,
     TemporalOption,
     TemporalActivityMixin,
@@ -94,8 +96,7 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None, schema=None):
         clock_model=clock_model,
         activity_cls=activity_class
     )
-
-    event.listen(cls, 'init', init_clock)
+    cls.temporal_options.bind(cls)
 
 
 def init_clock(obj: Clocked, args, kwargs):

@@ -25,17 +25,18 @@ T_PROPS = typing.TypeVar(
 class ActivityState:
     def __set__(self, instance, value):
         assert instance.temporal_options.activity_cls, "Make this better Joey"
-        setattr(instance, '_current_activity', value)
+        # TODO should not be able to change activity once changes have been made to temporal properties
+        setattr(instance, '__temporal_current_activity', value)
 
         if value:
-            current_tick = instance.current_tick
-            current_tick.activity = value
+            current_clock = instance.current_clock
+            current_clock.activity = value
 
     def __get__(self, instance, owner):
         if not instance:
             return None
 
-        return getattr(instance, '_current_activity')
+        return getattr(instance, '__temporal_current_activity')
 
     @staticmethod
     def reset_activity(target, attr):
@@ -51,29 +52,29 @@ class ActivityState:
 class ClockState:
 
     def __set__(self, instance, value):
-        setattr(instance, '_current_tick', value)
+        setattr(instance, '__temporal_current_tick', value)
 
     def __get__(self, instance, owner):
         if not instance:
             return None
         vclock = getattr(instance, 'vclock') or 0
 
-        if not getattr(instance, '_current_tick', None):
+        if not getattr(instance, '__temporal_current_tick', None):
             new_version = vclock + 1
             instance.vclock = new_version
             clock_tick = instance.temporal_options.clock_model(tick=new_version)
-            instance.current_tick = clock_tick
+            setattr(instance, '__temporal_current_tick', clock_tick)
             instance.clock.append(clock_tick)
 
-        return getattr(instance, '_current_tick')
+        return getattr(instance, '__temporal_current_tick')
 
     @staticmethod
     def reset_tick(target, attr):
-        target.current_tick = None
+        target.current_clock = None
 
     @staticmethod
     def start_clock(target, args, kwargs):
-        kwargs.setdefault('vclock', target.current_tick.tick)
+        kwargs.setdefault('vclock', target.current_clock.tick)
 
 
 class EntityClock(object):
@@ -255,7 +256,10 @@ class Clocked(object):
     def clock_tick(self, activity: TemporalActivityMixin = None):
         warnings.warn("clock_tick is deprecated, assign an activity directly",
                       DeprecationWarning)
-        self.activity = activity
+        if self.temporal_options.activity_cls:
+            if not activity:
+                raise ValueError
+            self.activity = activity
 
         yield self
 

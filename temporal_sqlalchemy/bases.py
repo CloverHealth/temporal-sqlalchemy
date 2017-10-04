@@ -34,7 +34,7 @@ class ActivityState:
 
     def __get__(self, instance, owner):
         if not instance:
-            return None
+            return self
 
         return getattr(instance, '__temporal_current_activity', None)
 
@@ -56,7 +56,7 @@ class ClockState:
 
     def __get__(self, instance, owner):
         if not instance:
-            return None
+            return self
 
         vclock = getattr(instance, 'vclock') or 0
         if not getattr(instance, '__temporal_current_tick', None):

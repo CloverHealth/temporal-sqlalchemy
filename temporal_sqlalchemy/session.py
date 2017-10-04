@@ -4,16 +4,25 @@ import typing
 
 import sqlalchemy.event as event
 import sqlalchemy.orm as orm
+import sqlalchemy.util as util
 
 from temporal_sqlalchemy.bases import TemporalOption, Clocked
-from temporal_sqlalchemy.metadata import (
-    get_session_metadata,
-    set_session_metadata
-)
 
 
-def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
-    for obj in session:
+TEMPORAL_METADATA_KEY = '__temporal'
+
+
+def set_session_metadata(session: orm.Session, metadata: dict):
+    if isinstance(session, orm.Session):
+        session.info[TEMPORAL_METADATA_KEY] = metadata
+    elif isinstance(session, orm.sessionmaker):
+        session.configure(info={TEMPORAL_METADATA_KEY: metadata})
+    else:
+        raise ValueError('Invalid session')
+
+
+def _temporal_models(iset: util.IdentitySet) -> typing.Iterable[Clocked]:
+    for obj in iset:
         if isinstance(getattr(obj, 'temporal_options', None), TemporalOption):
             yield obj
 
@@ -27,29 +36,25 @@ def persist_history(session: orm.Session, flush_context, instances):
         obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
 
-def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], strict_mode=False) -> orm.Session:
+def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker],
+                     **opt) -> orm.Session:
     """
     Setup the session to track changes via temporal
 
     :param session: SQLAlchemy ORM session to temporalize
-    :param strict_mode: if True, will raise exceptions when improper flush() calls are made (default is False)
     :return: temporalized SQLALchemy ORM session
     """
-    temporal_metadata = {
-        'strict_mode': strict_mode
-    }
+    if is_temporal_session(session):
+        return session
 
-    # defer listening to the flush hook until after we update the metadata
-    install_flush_hook = not is_temporal_session(session)
-
+    opt.setdefault('ENABLED', True)  # TODO make this significant
     # update to the latest metadata
-    set_session_metadata(session, temporal_metadata)
-
-    if install_flush_hook:
-        event.listen(session, 'before_flush', persist_history)
+    set_session_metadata(session, opt)
+    event.listen(session, 'before_flush', persist_history)
 
     return session
 
 
 def is_temporal_session(session: orm.Session) -> bool:
-    return isinstance(session, orm.Session) and get_session_metadata(session) is not None
+    return isinstance(session, orm.Session) and \
+           TEMPORAL_METADATA_KEY in session.info

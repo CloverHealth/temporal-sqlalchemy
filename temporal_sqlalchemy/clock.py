@@ -80,6 +80,10 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None, schema=None):
         backref_name = '%s_clock' % entity_table.name
         clock_properties['activity'] = \
             orm.relationship(lambda: activity_class, backref=backref_name)
+        cls.activity = ActivityState()
+        event.listen(cls, 'expire', ActivityState.reset_activity)
+        for prop in tracked_props:
+            event.listen(prop, 'set', ActivityState.activity_required)
 
     clock_model = build_clock_class(cls.__name__,
                                     entity_table.metadata,
@@ -96,22 +100,18 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None, schema=None):
         clock_model=clock_model,
         activity_cls=activity_class
     )
-    cls.temporal_options.bind(cls)
+    cls.current_clock = ClockState()
+    event.listen(cls, 'expire', ClockState.reset_tick)
+    event.listen(cls, 'init', init_clock)
 
 
 def init_clock(obj: Clocked, args, kwargs):
     kwargs.setdefault('vclock', 1)
-    initial_tick = obj.temporal_options.clock_model(
-        tick=kwargs['vclock'],
-        entity=obj,
-    )
+    obj.current_clock = obj.temporal_options.clock_model(tick=kwargs['vclock'])
 
     if obj.temporal_options.activity_cls and 'activity' not in kwargs:
         raise ValueError(
             "%r missing keyword argument: activity" % obj.__class__)
-
-    if 'activity' in kwargs:
-        initial_tick.activity = kwargs.pop('activity')
 
     materialize_defaults(obj, kwargs)
 

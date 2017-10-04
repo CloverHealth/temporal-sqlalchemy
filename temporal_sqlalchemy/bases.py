@@ -8,14 +8,14 @@ import warnings
 
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as sap
-import sqlalchemy.event as event
 import sqlalchemy.orm as orm
+import sqlalchemy.orm.base as base
 import sqlalchemy.orm.attributes as attributes
 import psycopg2.extras as psql_extras
 
 from temporal_sqlalchemy import nine
 
-_PersistentClockPair = collections.namedtuple('_PersistentClockPairssssss',
+_PersistentClockPair = collections.namedtuple('_PersistentClockPairs',
                                               ('effective', 'vclock'))
 
 T_PROPS = typing.TypeVar(
@@ -36,29 +36,29 @@ class ActivityState:
         if not instance:
             return None
 
-        return getattr(instance, '__temporal_current_activity')
+        return getattr(instance, '__temporal_current_activity', None)
 
     @staticmethod
     def reset_activity(target, attr):
         target.activity = None
 
     @staticmethod
-    def activity_required(target, key, value):
-        # TODO this doesn't work yet!
-        if not target.activity:
+    def activity_required(target, value, oldvalue, initiator):
+        if not target.activity and oldvalue is not base.NEVER_SET:
             raise ValueError("activity required")
 
 
 class ClockState:
-
-    def __set__(self, instance, value):
+    def __set__(self, instance, value: 'EntityClock'):
         setattr(instance, '__temporal_current_tick', value)
+        if value:
+            instance.clock.append(value)
 
     def __get__(self, instance, owner):
         if not instance:
             return None
+        
         vclock = getattr(instance, 'vclock') or 0
-
         if not getattr(instance, '__temporal_current_tick', None):
             new_version = vclock + 1
             instance.vclock = new_version
@@ -71,10 +71,6 @@ class ClockState:
     @staticmethod
     def reset_tick(target, attr):
         target.current_clock = None
-
-    @staticmethod
-    def start_clock(target, args, kwargs):
-        kwargs.setdefault('vclock', target.current_clock.tick)
 
 
 class EntityClock(object):
@@ -113,20 +109,6 @@ class TemporalOption(object):
         self.clock_model = clock_model
         self.activity_cls = activity_cls
         self.model = None
-
-    def bind(self, model: 'Clocked'):
-        # TODO this method smells
-        self.model = model
-
-        event.listen(model, 'expire', ClockState.reset_tick)
-        event.listen(model, 'init', ClockState.start_clock)
-
-        if self.activity_cls:
-            # TODO fix this
-            orm.validates(*{prop.key for prop in self.temporal_props},
-                          include_removes=True)(ActivityState.activity_required)
-
-            event.listen(model, 'expire', ActivityState.reset_activity)
 
     @property
     def clock_table(self):
@@ -244,6 +226,10 @@ class Clocked(object):
     first_tick = None  # type:  EntityClock
     latest_tick = None  # type:  EntityClock
 
+    # temporal descriptors
+    current_clock = None  # type: ClockState
+    activity = None  # type: typing.Optional[ActivityState]
+
     @property
     def date_created(self):
         return self.first_tick.timestamp
@@ -264,6 +250,3 @@ class Clocked(object):
         yield self
 
         return
-
-    activity = ActivityState()
-    current_clock = ClockState()

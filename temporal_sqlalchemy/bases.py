@@ -57,7 +57,7 @@ class ClockState:
     def __get__(self, instance, owner):
         if not instance:
             return None
-        
+
         vclock = getattr(instance, 'vclock') or 0
         if not getattr(instance, '__temporal_current_tick', None):
             new_version = vclock + 1
@@ -70,7 +70,8 @@ class ClockState:
 
     @staticmethod
     def reset_tick(target, attr):
-        target.current_clock = None
+        if target:
+            target.current_clock = None
 
 
 class EntityClock(object):
@@ -144,8 +145,6 @@ class TemporalOption(object):
                        timestamp: dt.datetime):
         """record all history for a given clocked object"""
         state = attributes.instance_state(clocked)
-
-        new_clock = self.make_clock(timestamp, clocked.current_clock.tick)
         attr = {'entity': clocked}
 
         for prop, cls in self.history_models.items():
@@ -163,6 +162,7 @@ class TemporalOption(object):
                 changes = attributes.get_history(clocked, prop.key)
 
             if changes.added:
+                new_clock = self.make_clock(timestamp, clocked.current_clock.tick)
                 # Cap previous history row if exists
                 if sa.inspect(clocked).identity is not None:
                     # but only if it already exists!!

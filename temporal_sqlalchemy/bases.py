@@ -71,7 +71,7 @@ class ClockState:
     @staticmethod
     def reset_tick(target, attr):
         if target:
-            target.current_clock = None
+            setattr(target, '__temporal_current_tick', None)
 
 
 class EntityClock(object):

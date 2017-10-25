@@ -124,3 +124,16 @@ class TestTemporalWithActivity(shared.DatabaseTest):
             with t.clock_tick(create_activity):
                 t.column = 4567
             session.commit()
+
+    def test_expire_clears_current_tick_and_activity(self, session):
+        create_activity = models.Activity(description='Create temp')
+        session.add(create_activity)
+        t = models.FirstTemporalWithActivity(column=1234,
+                                             activity=create_activity)
+        session.add(t)
+
+        assert getattr(t, '__temporal_current_tick', None)
+        assert t.activity
+        session.commit()
+        assert not getattr(t, '__temporal_current_tick', None)
+        assert not t.activity

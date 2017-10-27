@@ -45,8 +45,8 @@ CLASSIFIERS = [
 setuptools.setup(
     name='temporal-sqlalchemy',
     version=__version__,
-    description=SHORT_DESCRIPTION,
-    long_description=LONG_DESCRIPTION,
+    description='Temporal Extensions for SQLAlchemy ORM',
+    long_description='file: README.rst',
     author='Clover Health Engineering',
     author_email='engineering@cloverhealth.com',
     url='https://github.com/cloverhealth/temporal-sqlalchemy',

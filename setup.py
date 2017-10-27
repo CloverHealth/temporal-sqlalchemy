@@ -44,7 +44,7 @@ setuptools.setup(
     platforms=['any'],
     keywords='sqlalchemy postgresql orm temporal',
     classifiers=CLASSIFIERS,
-    python_requires='>=3.5',
+    python_requires='>=3.4',
     install_requires=[
         'psycopg2>=2.6.2',
         'sqlalchemy>=1.0.15',

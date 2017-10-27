@@ -4,10 +4,6 @@ import sys
 import setuptools
 
 
-# Get version information without importing the package
-__version__ = None
-exec(open('temporal_sqlalchemy/version.py', 'r').read())
-
 SETUP_DEPENDENCIES = []
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
     SETUP_DEPENDENCIES.append('pytest-runner')
@@ -33,7 +29,7 @@ CLASSIFIERS = [
 
 setuptools.setup(
     name='temporal-sqlalchemy',
-    version=__version__,
+    version='0.4.2',
     description='Temporal Extensions for SQLAlchemy ORM',
     long_description='file: README.rst',
     author='Clover Health Engineering',

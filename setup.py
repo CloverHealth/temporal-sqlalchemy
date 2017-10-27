@@ -8,7 +8,6 @@ import setuptools
 __version__ = None
 exec(open('temporal_sqlalchemy/version.py', 'r').read())
 
-TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
 SETUP_DEPENDENCIES = []
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
     SETUP_DEPENDENCIES.append('pytest-runner')
@@ -52,5 +51,9 @@ setuptools.setup(
         'typing>=3.5.2,<4.0.0;python_version<"3.5"'
     ],
     setup_requires=SETUP_DEPENDENCIES,
-    tests_require=TEST_DEPENDENCIES,
+    tests_require=[
+        'bumpversion>=0.5.0,<1.0.0',    # More for dev_requires
+        'tox>=2.0,<3.0.0',
+        'tox-pyenv>=1.0,<2.0.0',
+    ],
 )

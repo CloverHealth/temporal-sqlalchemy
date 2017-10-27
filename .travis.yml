@@ -39,6 +39,6 @@ matrix:
         postgresql: 9.5
       env: PG=9.5
 
-script: python setup.py test
+script: tox
 
 after_script: coveralls

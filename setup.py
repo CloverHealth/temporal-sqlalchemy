@@ -3,21 +3,11 @@
 import sys
 import setuptools
 
-if sys.version_info < (3, 4):
-    raise Exception('Python version < 3.4 are not supported.')
 
 # Get version information without importing the package
 __version__ = None
 exec(open('temporal_sqlalchemy/version.py', 'r').read())
 
-SHORT_DESCRIPTION = 'Temporal Extensions for SQLAlchemy ORM'
-LONG_DESCRIPTION = open('README.rst', 'r').read()
-
-DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
-if sys.version_info < (3, 5):
-    DEPENDENCIES.append('typing>=3.5.2,<4.0.0')
-if sys.version_info < (3, 4):
-    DEPENDENCIES.append('singledispatch>=3.4.0,<4.0.0')
 TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
 SETUP_DEPENDENCIES = []
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):

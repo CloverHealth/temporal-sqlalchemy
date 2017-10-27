@@ -4,7 +4,7 @@ machine:
 
 dependencies:
   override:
-    - pip3 install -q -r dev_requirements.txt
+    - pip3 install -q -r dev-requirements.txt
     - pyenv local 3.6.2 3.5.3 3.4.4
 
 test:

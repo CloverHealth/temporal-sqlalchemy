@@ -60,6 +60,10 @@ class TestSession(shared.DatabaseTest):
         assert refreshed_model.vclock == 2
         second_session.commit()
 
+        # see vclock is still 2 after second session commits
+        refreshed_model = second_session.query(models.NewStyleModel).filter_by(
+            id=newstylemodel.id).first()
+        assert refreshed_model.vclock == 2
         # clear out db
         transaction.rollback()
         second_session.close()

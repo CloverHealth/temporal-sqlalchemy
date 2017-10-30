@@ -132,7 +132,9 @@ class TestTemporalWithActivity(shared.DatabaseTest):
                                              activity=create_activity)
         session.add(t)
 
-        assert getattr(t, '__temporal_current_tick', None)
+        clock_model_instance = getattr(t, '__temporal_current_tick', None)
+        assert clock_model_instance
+        assert isinstance(clock_model_instance, models.FirstTemporalWithActivity.temporal_options.clock_model)
         assert t.activity
         session.commit()
         assert not getattr(t, '__temporal_current_tick', None)

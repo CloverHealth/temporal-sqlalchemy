@@ -83,13 +83,13 @@ version is 1.2.3; you'll run one of the following:
 
 .. code-block:: sh
     # Change the version to 1.2.4
-    bumpversion --current-version 1.2.3 patch
+    bumpversion patch
 
     # Change the version to 1.3.0
-    bumpversion --current-version 1.2.3 minor
+    bumpversion minor
 
     # Change the version to 2.0.0
-    bumpversion --current-version 1.2.3 major
+    bumpversion major
 
 More information on ``bumpversion`` and its usage can be found
 `here <https://pypi.python.org/pypi/bumpversion>`_.

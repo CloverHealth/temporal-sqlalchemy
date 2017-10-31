@@ -1,8 +1,8 @@
 Temporal SQLAlchemy
--------------------
+===================
 
 Some Terms
-==========
+----------
 
 Temporal
   time dimension. A property can have spatial and/or temporal dimensions,
@@ -26,7 +26,7 @@ High Velocity
   state changes frequently or you need to walk the history regularly.
 
 Methodologies
-=============
+-------------
 
 There exist several ways to add a temporal dimension to your data.
 `SQLAlchemy Continuum`_ uses a shadow or history table for each versioned
@@ -78,18 +78,19 @@ Updating Version Numbers
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once development is done, as your *last commit* on the branch you'll want to
-change the version number and create a tag for deployment. Suppose the current
-version is 1.2.3; you'll run one of the following:
+change the version number and create a tag for deployment. Please do this via
+the ``bumpversion`` command. More information on ``bumpversion`` and its usage
+can be found `here <https://pypi.python.org/pypi/bumpversion>`_, but in most
+cases you'll run one of the following commands. Assuming the current version is
+1.2.3:
 
 .. code-block:: sh
+
     # Change the version to 1.2.4
-    bumpversion --current-version 1.2.3 patch
+    bumpversion patch
 
     # Change the version to 1.3.0
-    bumpversion --current-version 1.2.3 minor
+    bumpversion minor
 
     # Change the version to 2.0.0
-    bumpversion --current-version 1.2.3 major
-
-More information on ``bumpversion`` and its usage can be found
-`here <https://pypi.python.org/pypi/bumpversion>`_.
+    bumpversion major

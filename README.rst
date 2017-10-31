@@ -64,7 +64,7 @@ this repo run:
     pyenv local 3.6.3 3.5.3 3.4.6
 
     # Install the development dependencies
-    pip3 install -Ur dev_requirements.txt
+    pip3 install -Ur dev-requirements.txt
 
 Running the Tests
 ~~~~~~~~~~~~~~~~~

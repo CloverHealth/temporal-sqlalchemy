@@ -48,7 +48,6 @@ setuptools.setup(
     ],
     setup_requires=SETUP_DEPENDENCIES,
     tests_require=[
-        'bumpversion>=0.5.0,<1.0.0',    # More for dev_requires
         'tox>=2.0,<3.0.0',
         'tox-pyenv>=1.0,<2.0.0',
     ],

@@ -29,7 +29,7 @@ CLASSIFIERS = [
 
 setuptools.setup(
     name='temporal-sqlalchemy',
-    version='0.4.3',
+    version='0.4.4',
     description='Temporal Extensions for SQLAlchemy ORM',
     long_description='file: README.rst',
     author='Clover Health Engineering',

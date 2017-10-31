@@ -4,17 +4,20 @@ dist: trusty
 
 language: python
 
-install: pip3 install -q -r dev-requirements.txt
+install: pip3 install -q -U -r dev-requirements.txt
 
 matrix:
   include:
-    - addons:
+    - python: 3.6
+      addons:
         postgresql: 9.5
       env: PG=9.5
-    - addons:
+    - python: 3.6
+      addons:
         postgresql: 9.4
       env: PG=9.4
-    - addons:
+    - python: 3.6
+      addons:
         postgresql: 9.3
       env: PG=9.3
 

@@ -8,15 +8,24 @@ install: pip3 install -q -U -r dev-requirements.txt
 
 matrix:
   include:
-    - python: 3.6
+    - python:
+        - '3.6'
+        - '3.5'
+        - '3.4'
       addons:
         postgresql: 9.5
       env: PG=9.5
-    - python: 3.6
+    - python:
+        - '3.6'
+        - '3.5'
+        - '3.4'
       addons:
         postgresql: 9.4
       env: PG=9.4
-    - python: 3.6
+    - python:
+        - '3.6'
+        - '3.5'
+        - '3.4'
       addons:
         postgresql: 9.3
       env: PG=9.3

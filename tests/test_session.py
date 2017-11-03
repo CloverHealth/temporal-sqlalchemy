@@ -42,3 +42,28 @@ class TestSession(shared.DatabaseTest):
                 assert not is_temporal_session(raw_session)
             finally:
                 raw_session.close()
+
+    def test_different_sessions_update_vclock(self, session, connection, sessionmaker, newstylemodel):
+        session.add(newstylemodel)
+        assert newstylemodel.vclock == 1
+        session.commit()
+
+        # create different session
+        transaction = connection.begin()
+        second_session = sessionmaker(bind=connection)
+        refreshed_model = second_session.query(models.NewStyleModel).first()
+
+        # update row within new session
+        refreshed_model.activity = models.Activity(description="Activity Description")
+        refreshed_model.description = "a new str"
+        second_session.add(refreshed_model)
+        assert refreshed_model.vclock == 2
+        second_session.commit()
+
+        # see vclock is still 2 after second session commits
+        refreshed_model = second_session.query(models.NewStyleModel).filter_by(
+            id=newstylemodel.id).first()
+        assert refreshed_model.vclock == 2
+        # clear out db
+        transaction.rollback()
+        second_session.close()

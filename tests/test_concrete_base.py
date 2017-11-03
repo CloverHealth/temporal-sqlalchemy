@@ -260,7 +260,6 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             t.prop_a = 1
             t.prop_c = datetime.datetime(2016, 5, 11,
                                          tzinfo=datetime.timezone.utc)
-
         session.commit()
 
         assert t.vclock == 1

@@ -16,6 +16,7 @@ CLASSIFIERS = [
     'License :: OSI Approved :: BSD License',
     'Operating System :: OS Independent',
     'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
@@ -40,9 +41,10 @@ setuptools.setup(
     platforms=['any'],
     keywords='sqlalchemy postgresql orm temporal',
     classifiers=CLASSIFIERS,
-    python_requires='>=3.4',
+    python_requires='>=3.3',
     install_requires=[
         'psycopg2>=2.6.2',
+        'singledispatch>=3.4.0.0;python_version<"3.4"',
         'sqlalchemy>=1.0.15',
         'typing>=3.5.2,<4.0.0;python_version<"3.5"'
     ],

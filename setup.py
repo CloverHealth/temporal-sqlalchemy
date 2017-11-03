@@ -3,22 +3,7 @@
 import sys
 import setuptools
 
-if sys.version_info < (3, 4):
-    raise Exception('Python version < 3.4 are not supported.')
 
-# Get version information without importing the package
-__version__ = None
-exec(open('temporal_sqlalchemy/version.py', 'r').read())
-
-SHORT_DESCRIPTION = 'Temporal Extensions for SQLAlchemy ORM'
-LONG_DESCRIPTION = open('README.rst', 'r').read()
-
-DEPENDENCIES = [l.strip() for l in open('requirements.txt', 'r')]
-if sys.version_info < (3, 5):
-    DEPENDENCIES.append('typing>=3.5.2,<4.0.0')
-if sys.version_info < (3, 4):
-    DEPENDENCIES.append('singledispatch>=3.4.0,<4.0.0')
-TEST_DEPENDENCIES = [l.strip() for l in open('test-requirements.txt', 'r')]
 SETUP_DEPENDENCIES = []
 if {'pytest', 'test', 'ptr'}.intersection(sys.argv):
     SETUP_DEPENDENCIES.append('pytest-runner')
@@ -34,6 +19,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
     'Topic :: Database',
     'Topic :: Database :: Front-Ends',
     'Topic :: Software Development',
@@ -44,9 +30,9 @@ CLASSIFIERS = [
 
 setuptools.setup(
     name='temporal-sqlalchemy',
-    version=__version__,
-    description=SHORT_DESCRIPTION,
-    long_description=LONG_DESCRIPTION,
+    version='0.4.5',
+    description='Temporal Extensions for SQLAlchemy ORM',
+    long_description='file: README.rst',
     author='Clover Health Engineering',
     author_email='engineering@cloverhealth.com',
     url='https://github.com/cloverhealth/temporal-sqlalchemy',
@@ -55,7 +41,16 @@ setuptools.setup(
     platforms=['any'],
     keywords='sqlalchemy postgresql orm temporal',
     classifiers=CLASSIFIERS,
-    install_requires=DEPENDENCIES,
+    python_requires='>=3.3',
+    install_requires=[
+        'psycopg2>=2.6.2',
+        'singledispatch>=3.4.0.0;python_version<"3.4"',
+        'sqlalchemy>=1.0.15',
+        'typing>=3.5.2,<4.0.0;python_version<"3.5"'
+    ],
     setup_requires=SETUP_DEPENDENCIES,
-    tests_require=TEST_DEPENDENCIES,
+    tests_require=[
+        'tox>=2.0,<3.0.0',
+        'tox-pyenv>=1.0,<2.0.0',
+    ],
 )

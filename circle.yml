@@ -1,10 +1,12 @@
 machine:
   python:
-    # Using 3.5.1 for now since 3.5.2 is much slower to install.
-    # Watch for official support here: https://circleci.com/docs/build-image-trusty/
-    version: 3.5.1
+    version: 3.6.2
+
+dependencies:
+  override:
+    - pip3 install -q -r dev-requirements.txt
+    - pyenv local 3.6.2 3.5.3 3.4.4 3.3.6
 
 test:
   override:
-    - python setup.py test
-
+    - tox -- --junitxml={$CIRCLE_TEST_REPORTS}/temporal-sqlalchemy/junit.xml

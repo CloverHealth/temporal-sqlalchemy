@@ -12,6 +12,7 @@ matrix:
         - '3.6'
         - '3.5'
         - '3.4'
+        - '3.3'
       addons:
         postgresql: 9.5
       env: PG=9.5
@@ -19,6 +20,7 @@ matrix:
         - '3.6'
         - '3.5'
         - '3.4'
+        - '3.3'
       addons:
         postgresql: 9.4
       env: PG=9.4
@@ -26,6 +28,7 @@ matrix:
         - '3.6'
         - '3.5'
         - '3.4'
+        - '3.3'
       addons:
         postgresql: 9.3
       env: PG=9.3

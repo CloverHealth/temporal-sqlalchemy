@@ -24,8 +24,14 @@ T_PROPS = typing.TypeVar(
 
 class ActivityState:
     def __set__(self, instance, value):
-        assert instance.temporal_options.activity_cls, "Make this better Joey"
-        # TODO should not be able to change activity once changes have been made to temporal properties
+        if not instance.temporal_options.activity_cls:
+            raise ValueError(
+                "Can't set activity state on instance of %r "
+                "because the activity class is None."
+                % type(instance).__name__)
+
+        # TODO should not be able to change activity once changes have
+        # TODO been made to temporal properties
         setattr(instance, '__temporal_current_activity', value)
 
         if value:
@@ -58,7 +64,7 @@ class ClockState:
         if not instance:
             return self
 
-        vclock = getattr(instance, 'vclock') or 0
+        vclock = getattr(instance, 'vclock', 0) or 0  # start at 0 if None
         if not getattr(instance, '__temporal_current_tick', None):
             new_version = vclock + 1
             instance.vclock = new_version
@@ -244,9 +250,7 @@ class Clocked(object):
                       DeprecationWarning)
         if self.temporal_options.activity_cls:
             if not activity:
-                raise ValueError
+                raise ValueError("activity is missing on edit") from None
             self.activity = activity
 
         yield self
-
-        return

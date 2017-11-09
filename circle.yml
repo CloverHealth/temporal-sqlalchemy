@@ -5,7 +5,9 @@ machine:
 dependencies:
   override:
     - pip3 install -q -r dev-requirements.txt
-    - pyenv local 3.6.2 3.5.3 3.4.4 3.3.6
+    # Right now pypy3.5 isn't included by default so we install it manually.
+    - pyenv install pypy3.5-5.8.0
+    - pyenv local 3.6.2 3.5.3 3.4.4 3.3.6 pypy3.5-5.8.0
 
 test:
   override:

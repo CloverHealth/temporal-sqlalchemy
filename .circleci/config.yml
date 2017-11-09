@@ -8,5 +8,8 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install dependencies
+          command: pip3 install -q -r dev-requirements.txt
+      - run:
           name: Test all versions
-          command: tox
+          command: tox -- --junitxml={$CIRCLE_TEST_REPORTS}/temporal-sqlalchemy/junit.xml

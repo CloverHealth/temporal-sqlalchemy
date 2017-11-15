@@ -21,4 +21,9 @@ def get_session_metadata(session: orm.Session) -> dict:
     """
     :return: metadata dictionary, or None if it was never installed
     """
-    return session.info.get(TEMPORAL_METADATA_KEY)
+    if isinstance(session, orm.Session):
+        return session.info.get(TEMPORAL_METADATA_KEY)
+    elif isinstance(session, orm.sessionmaker):
+        return session.kw.get('info', {}).get(TEMPORAL_METADATA_KEY)
+    else:
+        raise ValueError('Invalid session')

@@ -12,6 +12,10 @@ from temporal_sqlalchemy.metadata import (
 )
 
 
+CHANGESET_KEY = 'changeset'
+IS_COMMITTING_KEY = 'is_committing'
+
+
 def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
     for obj in session:
         if isinstance(getattr(obj, 'temporal_options', None), TemporalOption):
@@ -34,25 +38,25 @@ def persist_history_on_commit(session: orm.Session, flush_context, instances):
     metadata = get_session_metadata(session)
 
     for obj in _temporal_models(itertools.chain(session.dirty, session.new)):
-        metadata['changeset'].add(obj)
+        metadata[CHANGESET_KEY].add(obj)
 
-    if metadata['is_committing']:
+    if metadata[IS_COMMITTING_KEY]:
         correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
 
-        for obj in metadata['changeset']:
+        for obj in metadata[CHANGESET_KEY]:
             obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
-        metadata['changeset'].clear()
+        metadata[CHANGESET_KEY].clear()
 
 
 def enable_is_committing_flag(session):
     metadata = get_session_metadata(session)
-    metadata['is_committing'] = True
+    metadata[IS_COMMITTING_KEY] = True
 
 
 def disable_is_committing_flag(session):
     metadata = get_session_metadata(session)
-    metadata['is_committing'] = False
+    metadata[IS_COMMITTING_KEY] = False
 
 
 PERSIST_ON_COMMIT_LISTENERS = (
@@ -62,9 +66,7 @@ PERSIST_ON_COMMIT_LISTENERS = (
 )
 
 
-PERSIST_LISTENERS = (
-    ('before_flush', persist_history),
-)
+PERSIST_LISTENERS = (('before_flush', persist_history))
 
 
 def set_listeners(session, to_enable=(), to_disable=()):
@@ -91,8 +93,8 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker],
     if persist_on_commit:
         temporal_metadata.update({
             'persist_on_commit': persist_on_commit,
-            'changeset': set(),
-            'is_committing': False,
+            CHANGESET_KEY: set(),
+            IS_COMMITTING_KEY: False,
         })
 
     # defer listening to the flush hook until after we update the metadata

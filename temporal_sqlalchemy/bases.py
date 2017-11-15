@@ -49,12 +49,15 @@ class TemporalOption(object):
             history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
             temporal_props: typing.Iterable[T_PROPS],
             clock_model: nine.Type[EntityClock],
-            activity_cls: nine.Type[TemporalActivityMixin] = None):
+            activity_cls: nine.Type[TemporalActivityMixin] = None,
+            allow_persist_on_commit: bool = False):
         self.history_models = history_models
         self.temporal_props = temporal_props
 
         self.clock_model = clock_model
         self.activity_cls = activity_cls
+
+        self.allow_persist_on_commit = allow_persist_on_commit
 
     @property
     def clock_table(self):

@@ -37,16 +37,19 @@ def persist_history_on_commit(session: orm.Session, flush_context, instances):
 
     metadata = get_session_metadata(session)
 
+    correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
     for obj in _temporal_models(itertools.chain(session.dirty, session.new)):
-        metadata[CHANGESET_KEY].add(obj)
+        if obj.temporal_options.allow_persist_on_commit:
+            metadata[CHANGESET_KEY].add(obj)
+        else:
+            obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
     if metadata[IS_COMMITTING_KEY]:
-        correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
-
         for obj in metadata[CHANGESET_KEY]:
             obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
         metadata[CHANGESET_KEY].clear()
+        metadata[IS_COMMITTING_KEY] = False
 
 
 def enable_is_committing_flag(session):
@@ -54,19 +57,15 @@ def enable_is_committing_flag(session):
     metadata[IS_COMMITTING_KEY] = True
 
 
-def disable_is_committing_flag(session):
-    metadata = get_session_metadata(session)
-    metadata[IS_COMMITTING_KEY] = False
-
-
 PERSIST_ON_COMMIT_LISTENERS = (
     ('before_flush', persist_history_on_commit),
     ('before_commit', enable_is_committing_flag),
-    ('after_commit', disable_is_committing_flag),
 )
 
 
-PERSIST_LISTENERS = (('before_flush', persist_history))
+PERSIST_LISTENERS = (
+    ('before_flush', persist_history),
+)
 
 
 def set_listeners(session, to_enable=(), to_disable=()):

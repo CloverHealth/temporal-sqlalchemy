@@ -22,33 +22,41 @@ def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
             yield obj
 
 
+def _build_history(session, correlate_timestamp):
+    metadata = get_session_metadata(session)
+
+    items = list(metadata[CHANGESET_KEY].items())
+    metadata[CHANGESET_KEY].clear()
+
+    for obj, changes in items:
+        obj.temporal_options.record_history_on_commit(obj, changes, session, correlate_timestamp)
+
+
 def persist_history(session: orm.Session, flush_context, instances):
-    if any(_temporal_models(session.deleted)):
-        raise ValueError("Cannot delete temporal objects.")
-
-    correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
-    for obj in _temporal_models(itertools.chain(session.dirty, session.new)):
-        obj.temporal_options.record_history(obj, session, correlate_timestamp)
-
-
-def persist_history_on_commit(session: orm.Session, flush_context, instances):
     if any(_temporal_models(session.deleted)):
         raise ValueError("Cannot delete temporal objects.")
 
     metadata = get_session_metadata(session)
 
     correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+
     for obj in _temporal_models(itertools.chain(session.dirty, session.new)):
         if obj.temporal_options.allow_persist_on_commit:
-            metadata[CHANGESET_KEY].add(obj)
+            new_changes = obj.temporal_options.get_history(obj)
+
+            if new_changes:
+                if obj not in metadata[CHANGESET_KEY]:
+                    metadata[CHANGESET_KEY][obj] = {}
+
+                old_changes = metadata[CHANGESET_KEY][obj]
+                old_changes.update(new_changes)
         else:
             obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
+    # if this is the last flush, build all the history
     if metadata[IS_COMMITTING_KEY]:
-        for obj in metadata[CHANGESET_KEY]:
-            obj.temporal_options.record_history(obj, session, correlate_timestamp)
+        _build_history(session, correlate_timestamp)
 
-        metadata[CHANGESET_KEY].clear()
         metadata[IS_COMMITTING_KEY] = False
 
 
@@ -56,25 +64,12 @@ def enable_is_committing_flag(session):
     metadata = get_session_metadata(session)
     metadata[IS_COMMITTING_KEY] = True
 
+    if session._is_clean():
+        correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
+        _build_history(session, correlate_timestamp)
 
-PERSIST_ON_COMMIT_LISTENERS = (
-    ('before_flush', persist_history_on_commit),
-    ('before_commit', enable_is_committing_flag),
-)
-
-
-PERSIST_LISTENERS = (
-    ('before_flush', persist_history),
-)
-
-
-def set_listeners(session, to_enable=(), to_disable=()):
-    for listener_args in to_disable:
-        if event.contains(session, *listener_args):
-            event.remove(session, *listener_args)
-
-    for listener_args in to_enable:
-        event.listen(session, *listener_args)
+    if session._is_clean():
+        metadata[IS_COMMITTING_KEY] = False
 
 
 def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker],
@@ -88,35 +83,20 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker],
     """
     temporal_metadata = {
         'strict_mode': strict_mode,
+        'persist_on_commit': persist_on_commit,
+        CHANGESET_KEY: {},
+        IS_COMMITTING_KEY: False,
     }
-    if persist_on_commit:
-        temporal_metadata.update({
-            'persist_on_commit': persist_on_commit,
-            CHANGESET_KEY: set(),
-            IS_COMMITTING_KEY: False,
-        })
 
     # defer listening to the flush hook until after we update the metadata
-    old_metadata = get_session_metadata(session) or {}
-    install_flush_hook = not is_temporal_session(session) \
-        or persist_on_commit != old_metadata.get('persist_on_commit', False)
+    install_flush_hook = not is_temporal_session(session)
 
     # update to the latest metadata
     set_session_metadata(session, temporal_metadata)
 
     if install_flush_hook:
-        if persist_on_commit:
-            set_listeners(
-                session,
-                to_enable=PERSIST_ON_COMMIT_LISTENERS,
-                to_disable=PERSIST_LISTENERS,
-            )
-        else:
-            set_listeners(
-                session,
-                to_enable=PERSIST_LISTENERS,
-                to_disable=PERSIST_ON_COMMIT_LISTENERS,
-            )
+        event.listen(session, 'before_flush', persist_history)
+        event.listen(session, 'before_commit', enable_is_committing_flag)
 
     return session
 

@@ -244,3 +244,30 @@ class NewStyleModelWithRelationship(Base, temporal_sqlalchemy.TemporalModel):
             'rel',
         )
         schema = TEMPORAL_SCHEMA
+
+
+class PersistenceStrategy(temporal_sqlalchemy.Clocked, Base):
+    __abstract__ = True
+
+    id = auto_uuid()
+    prop_a = sa.Column(sa.Integer)
+    prop_b = sa.Column(sap.TEXT)
+
+
+@temporal_sqlalchemy.add_clock(
+    'prop_a', 'prop_b',
+    temporal_schema=TEMPORAL_SCHEMA,
+    activity_cls=Activity)
+class PersistOnFlushTable(PersistenceStrategy):
+    __tablename__ = 'persist_on_flush_table'
+    __table_args__ = {'schema': SCHEMA}
+
+
+@temporal_sqlalchemy.add_clock(
+    'prop_a', 'prop_b',
+    temporal_schema=TEMPORAL_SCHEMA,
+    activity_cls=Activity,
+    allow_persist_on_commit=True)
+class PersistOnCommitTable(PersistenceStrategy):
+    __tablename__ = 'persist_on_commit_table'
+    __table_args__ = {'schema': SCHEMA}

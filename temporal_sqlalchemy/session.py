@@ -84,7 +84,6 @@ def persist_history(session: orm.Session, flush_context, instances):
 def enable_is_committing_flag(session):
     metadata = get_session_metadata(session)
     persist_on_commit = metadata[PERSIST_ON_COMMIT_KEY]
-
     if not persist_on_commit:
         return
 

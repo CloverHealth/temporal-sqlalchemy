@@ -252,10 +252,14 @@ class PersistenceStrategy(temporal_sqlalchemy.Clocked, Base):
     id = auto_uuid()
     prop_a = sa.Column(sa.Integer)
     prop_b = sa.Column(sap.TEXT)
+    prop_c = sa.Column(sa.DateTime(True))
+    prop_d = sa.Column(mutable.MutableDict.as_mutable(sap.JSON))
+    prop_e = sa.Column(sap.DATERANGE)
+    prop_f = sa.Column(sap.ARRAY(sap.TEXT))
 
 
 @temporal_sqlalchemy.add_clock(
-    'prop_a', 'prop_b',
+    'prop_a', 'prop_b', 'prop_c', 'prop_d', 'prop_e', 'prop_f',
     temporal_schema=TEMPORAL_SCHEMA,
     activity_cls=Activity)
 class PersistOnFlushTable(PersistenceStrategy):
@@ -264,7 +268,7 @@ class PersistOnFlushTable(PersistenceStrategy):
 
 
 @temporal_sqlalchemy.add_clock(
-    'prop_a', 'prop_b',
+    'prop_a', 'prop_b', 'prop_c', 'prop_d', 'prop_e', 'prop_f',
     temporal_schema=TEMPORAL_SCHEMA,
     activity_cls=Activity,
     allow_persist_on_commit=True)

@@ -1,7 +1,7 @@
+from psycopg2.extras import NumericRange
 import pytest
 
 import temporal_sqlalchemy as temporal
-
 from . import shared, models
 
 
@@ -131,6 +131,35 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         history_result_1 = history_query_1.first()
         assert history_result_1.prop_a == 1234
 
+    def test_persist_on_commit_enabled_with_regular_persist(self, session):
+        activity = models.Activity(description='Create temp')
+        session.add(activity)
+
+        t = models.PersistOnFlushTable(prop_a=1234, activity=activity)
+        session.add(t)
+        session.flush()
+
+        activity_query = session.query(models.Activity)
+        assert activity_query.count() == 1
+        activity_result = activity_query.first()
+        assert activity_result.description == 'Create temp'
+
+        # check persist on flush works
+        clock_query = session.query(
+            models.PersistOnFlushTable.temporal_options.clock_table)
+        assert clock_query.count() == 1
+        clock_result = clock_query.first()
+        assert clock_result.activity_id == activity_result.id
+
+        history_query = session.query(
+            models.PersistOnFlushTable.temporal_options.history_models[
+                models.PersistOnFlushTable.prop_a.property])
+        assert history_query.count() == 1
+        history_result = history_query.first()
+        assert history_result.prop_a == 1234
+
+        session.commit()
+
     def test_persist_multiple_rows(self, session):
         activity = models.Activity(description='Create temp')
         session.add(activity)
@@ -202,3 +231,166 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert history_result.prop_a == 1234
 
         session.commit()
+
+    def test_persist_on_commit_with_edit_inside_clock_tick(self, session):
+        create_activity = models.Activity(description='Create temp')
+        session.add(create_activity)
+
+        t = models.PersistOnCommitTable(prop_a=1234, activity=create_activity)
+        session.add(t)
+
+        session.commit()
+
+        history_table = models.PersistOnCommitTable.temporal_options.history_models[
+            models.PersistOnCommitTable.prop_a.property]
+
+        history_query = session.query(history_table).order_by(history_table.prop_a)
+        assert history_query.count() == 1
+
+        edit_activity = models.Activity(description='Edit temp')
+        session.add(edit_activity)
+
+        with t.clock_tick(edit_activity):
+            t.prop_a = 9876
+
+        session.flush()
+        assert history_query.count() == 1
+
+        session.commit()
+        activity_query = session.query(models.Activity).order_by(models.Activity.description)
+        assert activity_query.count() == 2
+        activity_results = activity_query.all()
+        assert activity_results[0].description == 'Create temp'
+        assert activity_results[1].description == 'Edit temp'
+
+        clock_query = session.query(
+            models.PersistOnCommitTable.temporal_options.clock_table).order_by(
+                models.PersistOnCommitTable.temporal_options.clock_table.tick)
+        assert clock_query.count() == 2
+        clock_results = clock_query.all()
+        assert clock_results[0].activity_id == activity_results[0].id
+        assert clock_results[1].activity_id == activity_results[1].id
+
+        assert history_query.count() == 2
+        history_results = history_query.all()
+        assert history_results[0].prop_a == 1234
+        assert history_results[0].vclock == NumericRange(1, 2, '[)')
+        assert history_results[1].prop_a == 9876
+        assert history_results[1].vclock == NumericRange(2, None, '[)')
+
+    def test_persist_on_commit_with_edit_outside_clock_tick(self, session):
+        create_activity = models.Activity(description='Create temp')
+        session.add(create_activity)
+
+        t = models.PersistOnCommitTable(prop_a=1234, activity=create_activity)
+        session.add(t)
+
+        session.commit()
+
+        history_table = models.PersistOnCommitTable.temporal_options.history_models[
+            models.PersistOnCommitTable.prop_a.property]
+
+        history_query = session.query(history_table).order_by(history_table.prop_a)
+        assert history_query.count() == 1
+
+        edit_activity = models.Activity(description='Edit temp')
+        session.add(edit_activity)
+
+        with t.clock_tick(edit_activity):
+            t.prop_a = 9876
+
+        session.flush()
+        assert history_query.count() == 1
+
+        # we're setting this outside a clock tick, which should get picked up by the history builder
+        t.prop_a = 5678
+
+        session.commit()
+        activity_query = session.query(models.Activity).order_by(models.Activity.description)
+        assert activity_query.count() == 2
+        activity_results = activity_query.all()
+        assert activity_results[0].description == 'Create temp'
+        assert activity_results[1].description == 'Edit temp'
+
+        clock_query = session.query(
+            models.PersistOnCommitTable.temporal_options.clock_table).order_by(
+                models.PersistOnCommitTable.temporal_options.clock_table.tick)
+        assert clock_query.count() == 2
+        clock_results = clock_query.all()
+        assert clock_results[0].activity_id == activity_results[0].id
+        assert clock_results[1].activity_id == activity_results[1].id
+
+        assert history_query.count() == 2
+        history_results = history_query.all()
+        assert history_results[0].prop_a == 1234
+        assert history_results[0].vclock == NumericRange(1, 2, '[)')
+        assert history_results[1].prop_a == 5678
+        assert history_results[1].vclock == NumericRange(2, None, '[)')
+
+    def test_persist_on_commit_with_edit_no_clock_tick_no_strict_mode(self, session):
+        create_activity = models.Activity(description='Create temp')
+        session.add(create_activity)
+
+        t = models.PersistOnCommitTable(prop_a=1234, activity=create_activity)
+        session.add(t)
+
+        session.commit()
+
+        history_table = models.PersistOnCommitTable.temporal_options.history_models[
+            models.PersistOnCommitTable.prop_a.property]
+
+        history_query = session.query(history_table).order_by(history_table.prop_a)
+        assert history_query.count() == 1
+
+        session.flush()
+        assert history_query.count() == 1
+
+        # we're setting this outside a clock tick, which won't get picked up by the history builder
+        # since we never used clock_tick
+        t.prop_a = 5678
+
+        session.commit()
+        activity_query = session.query(models.Activity).order_by(models.Activity.description)
+        assert activity_query.count() == 1
+        activity_result = activity_query.first()
+        assert activity_result.description == 'Create temp'
+
+        clock_query = session.query(
+            models.PersistOnCommitTable.temporal_options.clock_table).order_by(
+                models.PersistOnCommitTable.temporal_options.clock_table.tick)
+        assert clock_query.count() == 1
+        clock_result = clock_query.first()
+        assert clock_result.activity_id == activity_result.id
+
+        assert history_query.count() == 2
+        history_results = history_query.all()
+        assert history_results[0].prop_a == 1234
+        # this is bad
+        assert history_results[0].vclock == NumericRange(empty=True)
+
+    def test_persist_on_commit_with_edit_no_clock_tick_with_strict_mode(self, session):
+        temporal.temporal_session(session, persist_on_commit=True, strict_mode=True)
+
+        create_activity = models.Activity(description='Create temp')
+        session.add(create_activity)
+
+        t = models.PersistOnCommitTable(prop_a=1234, activity=create_activity)
+        session.add(t)
+
+        session.commit()
+
+        history_table = models.PersistOnCommitTable.temporal_options.history_models[
+            models.PersistOnCommitTable.prop_a.property]
+
+        history_query = session.query(history_table).order_by(history_table.prop_a)
+        assert history_query.count() == 1
+
+        session.flush()
+        assert history_query.count() == 1
+
+        # we're setting this outside a clock tick, which won't get picked up by the history builder
+        # since we never used clock_tick
+        t.prop_a = 5678
+
+        with pytest.raises(AssertionError) as excinfo:
+            session.commit()

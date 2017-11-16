@@ -155,13 +155,18 @@ class TemporalOption(object):
     def get_history(self, clocked: 'Clocked'):
         history = {}
 
+        new_tick = self._get_new_tick(clocked)
+
+        vclock_history = attributes.get_history(clocked, 'vclock')
+        is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
+
         for prop, cls in self.history_models.items():
             value = self._get_prop_value(clocked, prop)
 
             if value is not NOT_FOUND_SENTINEL:
                 history[prop] = value
 
-        return history
+        return history, is_vclock_unchanged
 
     def _cap_previous_history_row(self, clocked, new_clock, cls):
         # Cap previous history row if exists

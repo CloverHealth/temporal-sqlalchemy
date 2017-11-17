@@ -20,6 +20,8 @@ _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 T_PROPS = typing.TypeVar(
     'T_PROP', orm.RelationshipProperty, orm.ColumnProperty)
 
+NOT_FOUND_SENTINEL = object()
+
 
 class EntityClock(object):
     id = sa.Column(sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
@@ -49,12 +51,15 @@ class TemporalOption(object):
             history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
             temporal_props: typing.Iterable[T_PROPS],
             clock_model: nine.Type[EntityClock],
-            activity_cls: nine.Type[TemporalActivityMixin] = None):
+            activity_cls: nine.Type[TemporalActivityMixin] = None,
+            allow_persist_on_commit: bool = False):
         self.history_models = history_models
         self.temporal_props = temporal_props
 
         self.clock_model = clock_model
         self.activity_cls = activity_cls
+
+        self.allow_persist_on_commit = allow_persist_on_commit
 
     @property
     def clock_table(self):
@@ -89,66 +94,28 @@ class TemporalOption(object):
                        session: orm.Session,
                        timestamp: dt.datetime):
         """record all history for a given clocked object"""
-        state = attributes.instance_state(clocked)
-        vclock_history = attributes.get_history(clocked, 'vclock')
-        try:
-            new_tick = state.dict['vclock']
-        except KeyError:
-            # TODO understand why this is necessary
-            new_tick = getattr(clocked, 'vclock')
+        new_tick = self._get_new_tick(clocked)
 
         is_strict_mode = get_session_metadata(session).get('strict_mode', False)
+        vclock_history = attributes.get_history(clocked, 'vclock')
         is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
 
         new_clock = self.make_clock(timestamp, new_tick)
         attr = {'entity': clocked}
 
         for prop, cls in self.history_models.items():
-            hist = attr.copy()
-            # fires a load on any deferred columns
-            if prop.key not in state.dict:
-                getattr(clocked, prop.key)
+            value = self._get_prop_value(clocked, prop)
 
-            if isinstance(prop, orm.RelationshipProperty):
-                changes = attributes.get_history(
-                    clocked, prop.key,
-                    passive=attributes.PASSIVE_NO_INITIALIZE)
-            else:
-                changes = attributes.get_history(clocked, prop.key)
-
-            if changes.added:
+            if value is not NOT_FOUND_SENTINEL:
                 if is_strict_mode:
                     assert not is_vclock_unchanged, \
                         'flush() has triggered for a changed temporalized property outside of a clock tick'
 
-                # Cap previous history row if exists
-                if sa.inspect(clocked).identity is not None:
-                    # but only if it already exists!!
-                    effective_close = sa.func.tstzrange(
-                        sa.func.lower(cls.effective),
-                        new_clock.effective.lower,
-                        '[)')
-                    vclock_close = sa.func.int4range(
-                        sa.func.lower(cls.vclock),
-                        new_clock.vclock.lower,
-                        '[)')
-
-                    history_query = getattr(
-                        clocked, cls.entity.property.backref[0])
-                    history_query.filter(
-                        sa.and_(
-                            sa.func.upper_inf(cls.effective),
-                            sa.func.upper_inf(cls.vclock),
-                        )
-                    ).update(
-                        {
-                            cls.effective: effective_close,
-                            cls.vclock: vclock_close,
-                        }, synchronize_session=False
-                    )
+                self._cap_previous_history_row(clocked, new_clock, cls)
 
                 # Add new history row
-                hist[prop.key] = changes.added[0]
+                hist = attr.copy()
+                hist[prop.key] = value
                 session.add(
                     cls(
                         vclock=new_clock.vclock,
@@ -156,6 +123,106 @@ class TemporalOption(object):
                         **hist
                     )
                 )
+
+    def record_history_on_commit(self,
+                       clocked: 'Clocked',
+                       changes: dict,
+                       session: orm.Session,
+                       timestamp: dt.datetime):
+        """record all history for a given clocked object"""
+        new_tick = self._get_new_tick(clocked)
+
+        new_clock = self.make_clock(timestamp, new_tick)
+        attr = {'entity': clocked}
+
+        for prop, cls in self.history_models.items():
+            if prop in changes:
+                value = changes[prop]
+
+                self._cap_previous_history_row(clocked, new_clock, cls)
+
+                # Add new history row
+                hist = attr.copy()
+                hist[prop.key] = value
+                session.add(
+                    cls(
+                        vclock=new_clock.vclock,
+                        effective=new_clock.effective,
+                        **hist
+                    )
+                )
+
+    def get_history(self, clocked: 'Clocked'):
+        history = {}
+
+        new_tick = self._get_new_tick(clocked)
+
+        vclock_history = attributes.get_history(clocked, 'vclock')
+        is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
+
+        for prop, cls in self.history_models.items():
+            value = self._get_prop_value(clocked, prop)
+
+            if value is not NOT_FOUND_SENTINEL:
+                history[prop] = value
+
+        return history, is_vclock_unchanged
+
+    def _cap_previous_history_row(self, clocked, new_clock, cls):
+        # Cap previous history row if exists
+        if sa.inspect(clocked).identity is not None:
+            # but only if it already exists!!
+            effective_close = sa.func.tstzrange(
+                sa.func.lower(cls.effective),
+                new_clock.effective.lower,
+                '[)')
+            vclock_close = sa.func.int4range(
+                sa.func.lower(cls.vclock),
+                new_clock.vclock.lower,
+                '[)')
+
+            history_query = getattr(
+                clocked, cls.entity.property.backref[0])
+            history_query.filter(
+                sa.and_(
+                    sa.func.upper_inf(cls.effective),
+                    sa.func.upper_inf(cls.vclock),
+                )
+            ).update(
+                {
+                    cls.effective: effective_close,
+                    cls.vclock: vclock_close,
+                }, synchronize_session=False
+            )
+
+    def _get_prop_value(self, clocked, prop):
+        state = attributes.instance_state(clocked)
+
+        # fires a load on any deferred columns
+        if prop.key not in state.dict:
+            getattr(clocked, prop.key)
+
+        if isinstance(prop, orm.RelationshipProperty):
+            changes = attributes.get_history(
+                clocked, prop.key,
+                passive=attributes.PASSIVE_NO_INITIALIZE)
+        else:
+            changes = attributes.get_history(clocked, prop.key)
+
+        if changes.added:
+            return changes.added[0]
+
+        return NOT_FOUND_SENTINEL
+
+    def _get_new_tick(self, clocked):
+        state = attributes.instance_state(clocked)
+        try:
+            new_tick = state.dict['vclock']
+        except KeyError:
+            # TODO understand why this is necessary
+            new_tick = getattr(clocked, 'vclock')
+
+        return new_tick
 
 
 class Clocked(object):

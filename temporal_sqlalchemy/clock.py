@@ -19,7 +19,8 @@ from temporal_sqlalchemy.bases import (
     TemporalProperty)
 
 
-def temporal_map(*track, mapper: orm.Mapper, activity_class=None, schema=None):
+def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
+                 schema=None, allow_persist_on_commit=False):
     assert 'vclock' not in track
 
     cls = mapper.class_
@@ -92,7 +93,8 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None, schema=None):
         temporal_props=tracked_props,
         history_models=history_models,
         clock_model=clock_model,
-        activity_cls=activity_class
+        activity_cls=activity_class,
+        allow_persist_on_commit=allow_persist_on_commit,
     )
 
     event.listen(cls, 'init', init_clock)
@@ -153,7 +155,8 @@ def defaults_safety(*track, mapper):
 # TODO kwargs to override default clock table and history tables prefix
 def add_clock(*props: typing.Iterable[str],  # noqa: C901
               activity_cls: nine.Type[TemporalActivityMixin] = None,
-              temporal_schema: typing.Optional[str] = None):
+              temporal_schema: typing.Optional[str] = None,
+              allow_persist_on_commit: bool = False):
     """Decorator to add clock and history to an orm model."""
 
     def make_temporal(cls: nine.Type[Clocked]):
@@ -163,7 +166,8 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
         temporal_map(*props,
                      mapper=mapper,
                      activity_class=activity_cls,
-                     schema=temporal_schema)
+                     schema=temporal_schema,
+                     allow_persist_on_commit=allow_persist_on_commit)
         return cls
 
     return make_temporal

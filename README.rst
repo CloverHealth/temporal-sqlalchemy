@@ -57,12 +57,11 @@ this repo run:
 
     # Install all the Python versions this package supports. This will take some
     # time.
-    pyenv install 3.3.6
     pyenv install 3.4.6
     pyenv install 3.5.3
     pyenv install 3.6.3
 
-    pyenv local 3.6.3 3.5.3 3.4.6 3.3.6
+    pyenv local 3.6.3 3.5.3 3.4.6
 
     # Install the development dependencies
     pip3 install -Ur dev-requirements.txt

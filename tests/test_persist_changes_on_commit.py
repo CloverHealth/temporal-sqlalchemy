@@ -1,8 +1,10 @@
 from psycopg2.extras import NumericRange
+import sqlalchemy as sa
 import sqlalchemy.orm as orm
 import pytest
 
 import temporal_sqlalchemy as temporal
+from temporal_sqlalchemy.metadata import CHANGESET_STACK_KEY
 from . import shared, models
 
 
@@ -22,8 +24,15 @@ def non_temporal_session(connection):
 
 
 @pytest.yield_fixture()
-def second_session(session):
-    yield session
+def second_session(connection: sa.engine.Connection, sessionmaker: orm.sessionmaker):
+    transaction = connection.begin()
+    sess = sessionmaker(bind=connection)
+
+    yield sess
+
+    transaction.rollback()
+    sess.close()
+
 
 class TestPersistChangesOnCommit(shared.DatabaseTest):
     def test_persist_on_commit(self, session):
@@ -67,15 +76,13 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
 
         t_1 = models.PersistOnCommitTable(prop_a=1234, activity=activity_1)
         session.add(t_1)
-
-        activity_2 = models.Activity(description='Create temp')
-        second_session.add(activity_2)
-
-        t_2 = models.PersistOnCommitTable(prop_a=1234, activity=activity_2)
-        second_session.add(t_2)
-
         session.flush()
-        second_session.flush()
+
+        t_1.prop_a = 4567
+
+        assert session is not second_session
+        # current changeset is blank (not being contaminated by other sessions)
+        assert len(second_session.info[CHANGESET_STACK_KEY][-1]) == 0
 
     def test_persist_only_last_change_before_flush(self, session):
         activity = models.Activity(description='Create temp')

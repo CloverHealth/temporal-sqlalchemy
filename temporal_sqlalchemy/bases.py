@@ -13,7 +13,7 @@ import sqlalchemy.orm.attributes as attributes
 import psycopg2.extras as psql_extras
 
 from temporal_sqlalchemy import nine
-from temporal_sqlalchemy.metadata import get_session_metadata
+from temporal_sqlalchemy.metadata import STRICT_MODE_KEY
 
 _ClockSet = collections.namedtuple('_ClockSet', ('effective', 'vclock'))
 
@@ -96,7 +96,7 @@ class TemporalOption(object):
         """record all history for a given clocked object"""
         new_tick = self._get_new_tick(clocked)
 
-        is_strict_mode = get_session_metadata(session).get('strict_mode', False)
+        is_strict_mode = session.info[STRICT_MODE_KEY]
         vclock_history = attributes.get_history(clocked, 'vclock')
         is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
 

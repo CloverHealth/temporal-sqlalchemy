@@ -103,9 +103,6 @@ def _get_transaction_stack_depth(transaction):
     return depth
 
 
-ARGH = {}
-
-
 def _initialize_metadata(session):
     if CHANGESET_STACK_KEY not in session.info:
         session.info[CHANGESET_STACK_KEY] = []
@@ -129,15 +126,13 @@ def start_transaction(session, transaction):
 
     session.info[CHANGESET_STACK_KEY].append({})
 
-    if len(session.info[CHANGESET_STACK_KEY]) > 2:
-        pass #import pdb; pdb.set_trace()
-
 
 def end_transaction(session, transaction):
-    # wrap in if statement for cases when the session is temporalized after a transaction has
-    # started, and then there are no actual temporal changes
-    if len(session.info[CHANGESET_STACK_KEY]):
-        session.info[CHANGESET_STACK_KEY].pop()
+    # there are some edge cases where no temporal changes actually happen, so don't bother
+    if not session.info.get(CHANGESET_STACK_KEY):
+        return
+
+    session.info[CHANGESET_STACK_KEY].pop()
 
     # reset bookkeeping fields if we're ending a top most transaction
     if transaction.parent is None:

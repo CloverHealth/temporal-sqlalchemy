@@ -1,9 +1,29 @@
 from psycopg2.extras import NumericRange
+import sqlalchemy.orm as orm
 import pytest
 
 import temporal_sqlalchemy as temporal
 from . import shared, models
 
+
+@pytest.yield_fixture()
+def non_temporal_session(connection):
+    sessionmaker = orm.sessionmaker()
+
+    transaction = connection.begin()
+    sess = sessionmaker(bind=connection)
+
+    yield sess
+
+    transaction.rollback()
+    sess.close()
+
+    sess.close_all()
+
+
+@pytest.yield_fixture()
+def second_session(session):
+    yield session
 
 class TestPersistChangesOnCommit(shared.DatabaseTest):
     def test_persist_on_commit(self, session):
@@ -35,6 +55,27 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert history_query.count() == 1
         history_result = history_query.first()
         assert history_result.prop_a == 1234
+
+    def test_persist_no_changes(self, non_temporal_session):
+        """temporalize after transaction has started to cover some additional edge cases"""
+        temporal.temporal_session(non_temporal_session)
+
+    def test_no_session_cross_pollution(self, session, second_session):
+        """make sure the junk from one session doesn't cross pollute another session"""
+        activity_1 = models.Activity(description='Create temp')
+        session.add(activity_1)
+
+        t_1 = models.PersistOnCommitTable(prop_a=1234, activity=activity_1)
+        session.add(t_1)
+
+        activity_2 = models.Activity(description='Create temp')
+        second_session.add(activity_2)
+
+        t_2 = models.PersistOnCommitTable(prop_a=1234, activity=activity_2)
+        second_session.add(t_2)
+
+        session.flush()
+        second_session.flush()
 
     def test_persist_only_last_change_before_flush(self, session):
         activity = models.Activity(description='Create temp')

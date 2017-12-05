@@ -124,7 +124,7 @@ def _initialize_metadata(session):
     # backfill any missing stack entries
     if len(session.info[CHANGESET_STACK_KEY]) == 0:
         depth = _get_transaction_stack_depth(session.transaction)
-        for i in range(depth):
+        for _ in range(depth):
             session.info[CHANGESET_STACK_KEY].append({})
 
 

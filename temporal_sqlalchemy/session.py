@@ -16,7 +16,10 @@ from temporal_sqlalchemy.metadata import (
 
 
 def get_current_changeset(session):
-    return session.info[CHANGESET_STACK_KEY][-1]
+    stack = session.info[CHANGESET_STACK_KEY]
+    assert len(stack) > 0
+
+    return stack[-1]
 
 
 def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:

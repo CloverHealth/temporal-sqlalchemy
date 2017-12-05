@@ -1,6 +1,7 @@
 import datetime
 import itertools
 import typing
+import warnings
 
 import sqlalchemy.event as event
 import sqlalchemy.orm as orm
@@ -92,24 +93,40 @@ def enable_is_committing_flag(session):
 def start_transaction(session, transaction):
     metadata = get_session_metadata(session)
 
-    if transaction.parent is None:
-        metadata[CHANGESET_STACK] = []
-        metadata[IS_COMMITTING] = False
-        metadata[IS_VCLOCK_UNCHANGED] = True
-
     metadata[CHANGESET_STACK].append({})
 
 
 def end_transaction(session, transaction):
     metadata = get_session_metadata(session)
 
+    metadata[CHANGESET_STACK].pop()
+
     # clear out bookkeeping fields if we're ending a top most transaction
     if transaction.parent is None:
-        del metadata[CHANGESET_STACK]
-        del metadata[IS_COMMITTING]
-        del metadata[IS_VCLOCK_UNCHANGED]
-    else:
-        metadata[CHANGESET_STACK].pop()
+        metadata[IS_VCLOCK_UNCHANGED] = True
+
+        if metadata[IS_COMMITTING]:
+            warnings.warn('IS_COMMITTING is still set to True, something is mismatched with temporal session lifecycle events')
+
+
+def _initialize_metadata(session, strict_mode):
+    # sqlalchemy does some weird memoizing / localizing the info dict to each session, so we have
+    # to copy the dictionary if we're just updating it. We now have additional metadata beyond
+    # strict_mode that can't be destroyed between function calls.
+    old_metadata = get_session_metadata(session)
+    temporal_metadata = old_metadata.copy() if old_metadata else {}
+    temporal_metadata['strict_mode'] = strict_mode
+
+    if CHANGESET_STACK not in temporal_metadata:
+        temporal_metadata[CHANGESET_STACK] = []
+
+    if IS_COMMITTING not in temporal_metadata:
+        temporal_metadata[IS_COMMITTING] = False
+
+    if IS_VCLOCK_UNCHANGED not in temporal_metadata:
+        temporal_metadata[IS_VCLOCK_UNCHANGED] = True
+
+    return temporal_metadata
 
 
 def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], strict_mode=False) -> orm.Session:
@@ -120,12 +137,7 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
     :param strict_mode: if True, will raise exceptions when improper flush() calls are made (default is False)
     :return: temporalized SQLALchemy ORM session
     """
-    # sqlalchemy does some weird memoizing / localizing the info dict to each session, so we have
-    # to copy the dictionary if we're just updating it. We now have additional metadata beyond
-    # strict_mode that can't be destroyed between function calls.
-    old_metadata = get_session_metadata(session)
-    temporal_metadata = old_metadata.copy() if old_metadata else {}
-    temporal_metadata['strict_mode'] = strict_mode
+    temporal_metadata = _initialize_metadata(session, strict_mode)
 
     # defer listening to the flush hook until after we update the metadata
     install_flush_hook = not is_temporal_session(session)

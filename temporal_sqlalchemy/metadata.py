@@ -1,29 +1,14 @@
 import sqlalchemy.orm as orm
 
-TEMPORAL_METADATA_KEY = '__temporal'
-
 __all__ = [
-    'get_session_metadata',
-    'set_session_metadata',
+    'STRICT_MODE_KEY',
+    'CHANGESET_STACK_KEY',
+    'IS_COMMITTING_KEY',
+    'IS_VCLOCK_UNCHANGED_KEY',
 ]
 
 
-def set_session_metadata(session: orm.Session, metadata: dict):
-    if isinstance(session, orm.Session):
-        session.info[TEMPORAL_METADATA_KEY] = metadata
-    elif isinstance(session, orm.sessionmaker):
-        session.configure(info={TEMPORAL_METADATA_KEY: metadata})
-    else:
-        raise ValueError('Invalid session')
-
-
-def get_session_metadata(session: orm.Session) -> dict:
-    """
-    :return: metadata dictionary, or None if it was never installed
-    """
-    if isinstance(session, orm.Session):
-        return session.info.get(TEMPORAL_METADATA_KEY)
-    elif isinstance(session, orm.sessionmaker):
-        return session.kw.get('info', {}).get(TEMPORAL_METADATA_KEY)
-    else:
-        raise ValueError('Invalid session')
+STRICT_MODE_KEY = '__temporal_strict_mode'
+CHANGESET_STACK_KEY = '__temporal_changeset_stack'
+IS_COMMITTING_KEY = '__temporal_is_committing'
+IS_VCLOCK_UNCHANGED_KEY = '__temporal_is_vclock_unchanged'

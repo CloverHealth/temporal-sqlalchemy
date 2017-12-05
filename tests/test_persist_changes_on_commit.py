@@ -1,8 +1,37 @@
 from psycopg2.extras import NumericRange
+import sqlalchemy as sa
+import sqlalchemy.orm as orm
 import pytest
 
 import temporal_sqlalchemy as temporal
+from temporal_sqlalchemy.metadata import CHANGESET_STACK_KEY
 from . import shared, models
+
+
+@pytest.yield_fixture()
+def non_temporal_session(connection):
+    sessionmaker = orm.sessionmaker()
+
+    transaction = connection.begin()
+    sess = sessionmaker(bind=connection)
+
+    yield sess
+
+    transaction.rollback()
+    sess.close()
+
+    sess.close_all()
+
+
+@pytest.yield_fixture()
+def second_session(connection: sa.engine.Connection, sessionmaker: orm.sessionmaker):
+    transaction = connection.begin()
+    sess = sessionmaker(bind=connection)
+
+    yield sess
+
+    transaction.rollback()
+    sess.close()
 
 
 class TestPersistChangesOnCommit(shared.DatabaseTest):
@@ -35,6 +64,34 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert history_query.count() == 1
         history_result = history_query.first()
         assert history_result.prop_a == 1234
+
+    def test_persist_no_changes(self, non_temporal_session):
+        """temporalize after transaction has started to cover some additional edge cases"""
+        temporal.temporal_session(non_temporal_session)
+
+    def test_persist_no_temporal_changes(self, non_temporal_session):
+        """temporalize after transaction has started to cover some additional edge cases"""
+        session = temporal.temporal_session(non_temporal_session)
+
+        t = models.NonTemporalTable()
+        session.add(t)
+
+        session.commit()
+
+    def test_no_session_cross_pollution(self, session, second_session):
+        """make sure the junk from one session doesn't cross pollute another session"""
+        activity_1 = models.Activity(description='Create temp')
+        session.add(activity_1)
+
+        t_1 = models.PersistOnCommitTable(prop_a=1234, activity=activity_1)
+        session.add(t_1)
+        session.flush()
+
+        t_1.prop_a = 4567
+
+        assert session is not second_session
+        # current changeset is blank (not being contaminated by other sessions)
+        assert len(second_session.info[CHANGESET_STACK_KEY][-1]) == 0
 
     def test_persist_only_last_change_before_flush(self, session):
         activity = models.Activity(description='Create temp')
@@ -191,6 +248,19 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert history_result_2.prop_a == 5678
 
     def test_persist_when_inside_nested_transaction(self, session):
+        outer_activity = models.Activity(description='Create temp')
+        session.add(outer_activity)
+
+        outer_t = models.PersistOnCommitTable(prop_a=5678, activity=outer_activity)
+        session.add(outer_t)
+        session.flush()
+
+        history_query = session.query(
+            models.PersistOnCommitTable.temporal_options.history_models[
+                models.PersistOnCommitTable.prop_a.property])
+
+        assert history_query.count() == 0
+
         assert session.transaction.nested is False
         session.begin_nested()
         assert session.transaction.nested is True
@@ -203,19 +273,12 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         session.flush()
 
         activity_query = session.query(models.Activity)
-        assert activity_query.count() == 1
-        activity_result = activity_query.first()
-        assert activity_result.description == 'Create temp'
+        assert activity_query.count() == 2
 
         clock_query = session.query(
             models.PersistOnCommitTable.temporal_options.clock_table)
-        assert clock_query.count() == 1
-        clock_result = clock_query.first()
-        assert clock_result.activity_id == activity_result.id
+        assert clock_query.count() == 2
 
-        history_query = session.query(
-            models.PersistOnCommitTable.temporal_options.history_models[
-                models.PersistOnCommitTable.prop_a.property])
         assert history_query.count() == 0
 
         assert session.transaction.nested is True
@@ -223,10 +286,60 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert session.transaction.nested is False
 
         assert history_query.count() == 1
-        history_result = history_query.first()
+        history_result = history_query.filter_by(prop_a=1234).one()
         assert history_result.prop_a == 1234
 
         session.commit()
+
+        assert history_query.count() == 2
+        history_result = history_query.filter_by(prop_a=5678).one()
+        assert history_result.prop_a == 5678
+
+    def test_persist_when_inside_nested_transaction_with_rollback(self, session):
+        outer_activity = models.Activity(description='Create temp')
+        session.add(outer_activity)
+
+        outer_t = models.PersistOnCommitTable(prop_a=5678, activity=outer_activity)
+        session.add(outer_t)
+        session.flush()
+
+        history_query = session.query(
+            models.PersistOnCommitTable.temporal_options.history_models[
+                models.PersistOnCommitTable.prop_a.property])
+
+        assert history_query.count() == 0
+
+        assert session.transaction.nested is False
+        session.begin_nested()
+        assert session.transaction.nested is True
+
+        activity = models.Activity(description='Create temp')
+        session.add(activity)
+
+        t = models.PersistOnCommitTable(prop_a=1234, activity=activity)
+        session.add(t)
+        session.flush()
+
+        activity_query = session.query(models.Activity)
+        assert activity_query.count() == 2
+
+        clock_query = session.query(
+            models.PersistOnCommitTable.temporal_options.clock_table)
+        assert clock_query.count() == 2
+
+        assert history_query.count() == 0
+
+        assert session.transaction.nested is True
+        session.rollback()
+        assert session.transaction.nested is False
+
+        assert history_query.count() == 0
+
+        session.commit()
+
+        assert history_query.count() == 1
+        history_result = history_query.first()
+        assert history_result.prop_a == 5678
 
     def test_persist_on_commit_with_edit_inside_clock_tick(self, session):
         create_activity = models.Activity(description='Create temp')

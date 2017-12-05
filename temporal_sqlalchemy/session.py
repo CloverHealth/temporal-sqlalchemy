@@ -12,7 +12,6 @@ from temporal_sqlalchemy.metadata import (
 )
 
 
-PERSIST_ON_COMMIT_KEY = 'persist_on_commit'
 CHANGESET_KEY = 'changeset'
 IS_COMMITTING_KEY = 'is_committing'
 IS_VCLOCK_UNCHANGED = 'is_vclock_unchanged'
@@ -54,38 +53,30 @@ def persist_history(session: orm.Session, flush_context, instances):
     changed_rows = _temporal_models(itertools.chain(session.dirty, session.new))
 
     metadata = get_session_metadata(session)
-    persist_on_commit = metadata[PERSIST_ON_COMMIT_KEY]
-    if persist_on_commit:
-        for obj in changed_rows:
-            if obj.temporal_options.allow_persist_on_commit:
-                new_changes, is_vclock_unchanged = obj.temporal_options.get_history(obj)
+    for obj in changed_rows:
+        if obj.temporal_options.allow_persist_on_commit:
+            new_changes, is_vclock_unchanged = obj.temporal_options.get_history(obj)
 
-                if new_changes:
-                    if obj not in metadata[CHANGESET_KEY]:
-                        metadata[CHANGESET_KEY][obj] = {}
+            if new_changes:
+                if obj not in metadata[CHANGESET_KEY]:
+                    metadata[CHANGESET_KEY][obj] = {}
 
-                    old_changes = metadata[CHANGESET_KEY][obj]
-                    old_changes.update(new_changes)
+                old_changes = metadata[CHANGESET_KEY][obj]
+                old_changes.update(new_changes)
 
-                metadata[IS_VCLOCK_UNCHANGED] = metadata[IS_VCLOCK_UNCHANGED] and is_vclock_unchanged
-            else:
-                obj.temporal_options.record_history(obj, session, correlate_timestamp)
-
-        # if this is the last flush, build all the history
-        if metadata[IS_COMMITTING_KEY]:
-            _build_history(session, correlate_timestamp)
-
-            _reset_flags(metadata)
-    else:
-        for obj in changed_rows:
+            metadata[IS_VCLOCK_UNCHANGED] = metadata[IS_VCLOCK_UNCHANGED] and is_vclock_unchanged
+        else:
             obj.temporal_options.record_history(obj, session, correlate_timestamp)
+
+    # if this is the last flush, build all the history
+    if metadata[IS_COMMITTING_KEY]:
+        _build_history(session, correlate_timestamp)
+
+        _reset_flags(metadata)
 
 
 def enable_is_committing_flag(session):
     metadata = get_session_metadata(session)
-    persist_on_commit = metadata[PERSIST_ON_COMMIT_KEY]
-    if not persist_on_commit:
-        return
 
     metadata[IS_COMMITTING_KEY] = True
 
@@ -99,8 +90,7 @@ def enable_is_committing_flag(session):
         _reset_flags(metadata)
 
 
-def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker],
-    strict_mode=False, persist_on_commit=False) -> orm.Session:
+def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], strict_mode=False) -> orm.Session:
     """
     Setup the session to track changes via temporal
 
@@ -110,7 +100,6 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker],
     """
     temporal_metadata = {
         'strict_mode': strict_mode,
-        PERSIST_ON_COMMIT_KEY: persist_on_commit,
     }
     _reset_flags(temporal_metadata)
 

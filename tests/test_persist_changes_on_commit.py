@@ -6,10 +6,6 @@ from . import shared, models
 
 
 class TestPersistChangesOnCommit(shared.DatabaseTest):
-    @pytest.fixture(autouse=True)
-    def setup_batched_session(self, session):
-        temporal.temporal_session(session, persist_on_commit=True)
-
     def test_persist_on_commit(self, session):
         activity = models.Activity(description='Create temp')
         session.add(activity)
@@ -369,7 +365,7 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert history_results[0].vclock == NumericRange(empty=True)
 
     def test_persist_on_commit_with_edit_no_clock_tick_with_strict_mode(self, session):
-        temporal.temporal_session(session, persist_on_commit=True, strict_mode=True)
+        temporal.temporal_session(session, strict_mode=True)
 
         create_activity = models.Activity(description='Create temp')
         session.add(create_activity)

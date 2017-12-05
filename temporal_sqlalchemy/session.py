@@ -12,15 +12,13 @@ from temporal_sqlalchemy.metadata import (
 )
 
 
-CHANGESET_KEY = 'changeset'
-IS_COMMITTING_KEY = 'is_committing'
+CHANGESET_STACK = 'changeset_stack'
+IS_COMMITTING = 'is_committing'
 IS_VCLOCK_UNCHANGED = 'is_vclock_unchanged'
 
 
-def _reset_flags(metadata):
-    metadata[CHANGESET_KEY] = {}
-    metadata[IS_COMMITTING_KEY] = False
-    metadata[IS_VCLOCK_UNCHANGED] = True
+def get_current_changeset(metadata):
+    return metadata[CHANGESET_STACK][-1]
 
 
 def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
@@ -31,9 +29,9 @@ def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
 
 def _build_history(session, correlate_timestamp):
     metadata = get_session_metadata(session)
-
-    items = list(metadata[CHANGESET_KEY].items())
-    metadata[CHANGESET_KEY].clear()
+    changeset = get_current_changeset(metadata)
+    items = list(changeset.items())
+    changeset.clear()
 
     is_strict_mode = metadata.get('strict_mode', False)
     is_vclock_unchanged = metadata.get(IS_VCLOCK_UNCHANGED, False)
@@ -53,15 +51,16 @@ def persist_history(session: orm.Session, flush_context, instances):
     changed_rows = _temporal_models(itertools.chain(session.dirty, session.new))
 
     metadata = get_session_metadata(session)
+    changeset = get_current_changeset(metadata)
     for obj in changed_rows:
         if obj.temporal_options.allow_persist_on_commit:
             new_changes, is_vclock_unchanged = obj.temporal_options.get_history(obj)
 
             if new_changes:
-                if obj not in metadata[CHANGESET_KEY]:
-                    metadata[CHANGESET_KEY][obj] = {}
+                if obj not in changeset:
+                    changeset[obj] = {}
 
-                old_changes = metadata[CHANGESET_KEY][obj]
+                old_changes = changeset[obj]
                 old_changes.update(new_changes)
 
             metadata[IS_VCLOCK_UNCHANGED] = metadata[IS_VCLOCK_UNCHANGED] and is_vclock_unchanged
@@ -69,16 +68,16 @@ def persist_history(session: orm.Session, flush_context, instances):
             obj.temporal_options.record_history(obj, session, correlate_timestamp)
 
     # if this is the last flush, build all the history
-    if metadata[IS_COMMITTING_KEY]:
+    if metadata[IS_COMMITTING]:
         _build_history(session, correlate_timestamp)
 
-        _reset_flags(metadata)
+        metadata[IS_COMMITTING] = False
 
 
 def enable_is_committing_flag(session):
     metadata = get_session_metadata(session)
 
-    metadata[IS_COMMITTING_KEY] = True
+    metadata[IS_COMMITTING] = True
 
     if session._is_clean():
         correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
@@ -87,7 +86,30 @@ def enable_is_committing_flag(session):
     # building the history can cause the session to be dirtied, which will in turn call another
     # flush(), so we want to check this before reseting
     if session._is_clean():
-        _reset_flags(metadata)
+        metadata[IS_COMMITTING] = False
+
+
+def start_transaction(session, transaction):
+    metadata = get_session_metadata(session)
+
+    if transaction.parent is None:
+        metadata[CHANGESET_STACK] = []
+        metadata[IS_COMMITTING] = False
+        metadata[IS_VCLOCK_UNCHANGED] = True
+
+    metadata[CHANGESET_STACK].append({})
+
+
+def end_transaction(session, transaction):
+    metadata = get_session_metadata(session)
+
+    # clear out bookkeeping fields if we're ending a top most transaction
+    if transaction.parent is None:
+        del metadata[CHANGESET_STACK]
+        del metadata[IS_COMMITTING]
+        del metadata[IS_VCLOCK_UNCHANGED]
+    else:
+        metadata[CHANGESET_STACK].pop()
 
 
 def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], strict_mode=False) -> orm.Session:
@@ -98,10 +120,12 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
     :param strict_mode: if True, will raise exceptions when improper flush() calls are made (default is False)
     :return: temporalized SQLALchemy ORM session
     """
-    temporal_metadata = {
-        'strict_mode': strict_mode,
-    }
-    _reset_flags(temporal_metadata)
+    # sqlalchemy does some weird memoizing / localizing the info dict to each session, so we have
+    # to copy the dictionary if we're just updating it. We now have additional metadata beyond
+    # strict_mode that can't be destroyed between function calls.
+    old_metadata = get_session_metadata(session)
+    temporal_metadata = old_metadata.copy() if old_metadata else {}
+    temporal_metadata['strict_mode'] = strict_mode
 
     # defer listening to the flush hook until after we update the metadata
     install_flush_hook = not is_temporal_session(session)
@@ -112,6 +136,10 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
     if install_flush_hook:
         event.listen(session, 'before_flush', persist_history)
         event.listen(session, 'before_commit', enable_is_committing_flag)
+
+        # nested transaction handling
+        event.listen(session, 'after_transaction_create', start_transaction)
+        event.listen(session, 'after_transaction_end', end_transaction)
 
     return session
 

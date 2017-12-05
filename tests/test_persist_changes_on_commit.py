@@ -69,6 +69,15 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         """temporalize after transaction has started to cover some additional edge cases"""
         temporal.temporal_session(non_temporal_session)
 
+    def test_persist_no_temporal_changes(self, non_temporal_session):
+        """temporalize after transaction has started to cover some additional edge cases"""
+        session = temporal.temporal_session(non_temporal_session)
+
+        t = models.NonTemporalTable()
+        session.add(t)
+
+        session.commit()
+
     def test_no_session_cross_pollution(self, session, second_session):
         """make sure the junk from one session doesn't cross pollute another session"""
         activity_1 = models.Activity(description='Create temp')

@@ -275,3 +275,10 @@ class PersistOnFlushTable(PersistenceStrategy):
 class PersistOnCommitTable(PersistenceStrategy):
     __tablename__ = 'persist_on_commit_table'
     __table_args__ = {'schema': SCHEMA}
+
+
+class NonTemporalTable(Base):
+    __tablename__ = 'non_temporal_table'
+    __table_args__ = {'schema': SCHEMA}
+
+    id = auto_uuid()

@@ -1,6 +1,7 @@
 import datetime
 import itertools
 import typing
+import warnings
 
 import sqlalchemy.event as event
 import sqlalchemy.orm as orm
@@ -25,6 +26,11 @@ def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
 
 
 def _build_history(session, correlate_timestamp):
+    # this shouldn't happen, but it might happen, log a warning and investigate
+    if not session.info.get(CHANGESET_STACK_KEY):
+        warnings.warn('changeset_stack is missing but we are in _build_history()')
+        return
+
     changeset = get_current_changeset(session)
     items = list(changeset.items())
     changeset.clear()

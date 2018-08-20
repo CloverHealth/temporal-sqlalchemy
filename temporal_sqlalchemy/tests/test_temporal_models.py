@@ -85,7 +85,7 @@ class TestTemporalModels(shared.DatabaseTest):
             prop_d={'foo': 'old value'},
             prop_e=psql_extras.DateRange(datetime.date(2016, 1, 1),
                                          datetime.date(2016, 1, 10)),
-            prop_f=['old', 'stuff']
+            prop_f=['old', 'stuff'],
         )
 
         session.add(t)
@@ -235,7 +235,7 @@ class TestTemporalModels(shared.DatabaseTest):
             prop_d={'foo': 'old value'},
             prop_e=psql_extras.DateRange(datetime.date(2016, 1, 1),
                                          datetime.date(2016, 1, 10)),
-            prop_f=['old', 'stuff']
+            prop_f=['old', 'stuff'],
         )
         double_wrapped_session.add(t)
         double_wrapped_session.commit()
@@ -299,7 +299,7 @@ class TestTemporalModels(shared.DatabaseTest):
 
     @pytest.mark.parametrize('session_func_name', (
         'flush',
-        'commit'
+        'commit',
     ))
     def test_disallow_flushes_within_clock_ticks_when_strict(self, session, session_func_name):
         session = temporal.temporal_session(session, strict_mode=True)
@@ -320,13 +320,12 @@ class TestTemporalModels(shared.DatabaseTest):
 
             assert re.match(
                 r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
-                str(excinfo)
+                str(excinfo),
             )
-
 
     @pytest.mark.parametrize('session_func_name', (
         'flush',
-        'commit'
+        'commit',
     ))
     def test_allow_flushes_within_clock_ticks_when_strict_but_no_change(self, session, session_func_name):
         session = temporal.temporal_session(session, strict_mode=True)
@@ -344,10 +343,9 @@ class TestTemporalModels(shared.DatabaseTest):
 
         eval('session.{func_name}()'.format(func_name=session_func_name))
 
-
     @pytest.mark.parametrize('session_func_name', (
             'flush',
-            'commit'
+            'commit',
     ))
     def test_disallow_flushes_on_changes_without_clock_ticks_when_strict(self, session, session_func_name):
         session = temporal.temporal_session(session, strict_mode=True)
@@ -368,13 +366,13 @@ class TestTemporalModels(shared.DatabaseTest):
 
         assert re.match(
             r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
-            str(excinfo)
+            str(excinfo),
         )
 
     # TODO this test should be removed once strict flush() checking becomes the default behavior
     @pytest.mark.parametrize('session_func_name', (
             'flush',
-            'commit'
+            'commit',
     ))
     def test_allow_loose_flushes_when_not_strict(self, session, session_func_name):
         t = models.SimpleTableTemporal(

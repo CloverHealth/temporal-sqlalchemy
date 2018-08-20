@@ -19,6 +19,8 @@ disable=bad-continuation,
     too-few-public-methods,
     too-many-arguments,
     wrong-import-order,
+    invalid-name,
+    useless-import-alias,
 
 
 [REPORTS]
@@ -39,3 +41,5 @@ no-docstring-rgx=__.*__|_.*|test_.*
 # Minimum line length for functions/classes that require docstrings, shorter
 # ones are exempt.
 docstring-min-length=3
+# Come on now
+max-line-length=120

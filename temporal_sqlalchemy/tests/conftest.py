@@ -6,6 +6,7 @@ import testing.postgresql
 import temporal_sqlalchemy as temporal
 from . import models
 
+
 @pytest.yield_fixture(scope='session')
 def engine():
     db = testing.postgresql.Postgresql()

@@ -14,11 +14,11 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
 
         assert isinstance(options, temporal.TemporalOption)
 
-        clock_table = options.clock_table
-        assert clock_table.__table__.name == "%s_clock" % (
+        clock_model = options.clock_model
+        assert clock_model.__table__.name == "%s_clock" % (
             models.SimpleConcreteChildTemporalTable.__table__.name)
 
-        inspected = sa.inspect(clock_table)
+        inspected = sa.inspect(clock_model)
         assert 'entity' in inspected.relationships
         entity_rel = inspected.relationships['entity']
         assert (entity_rel.target
@@ -43,7 +43,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
     def test_init_adds_clock_tick(self, session):
         clock_query = session.query(
             models.SimpleConcreteChildTemporalTable
-            .temporal_options.clock_table
+            .temporal_options.clock_model,
         ).count()
         assert clock_query == 0
         t = models.SimpleConcreteChildTemporalTable(
@@ -59,7 +59,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         t = session.query(models.SimpleConcreteChildTemporalTable).first()
         clock_query = session.query(
             models.SimpleConcreteChildTemporalTable
-            .temporal_options.clock_table
+            .temporal_options.clock_model,
         )
         assert clock_query.count() == 1
         assert t.vclock == 1
@@ -87,8 +87,8 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             assert getattr(history, attr) == getattr(t, attr)
 
     def test_clock_tick_editing(self, session):
-        clock_table = models.SimpleConcreteChildTemporalTable \
-            .temporal_options.clock_table
+        clock_model = models.SimpleConcreteChildTemporalTable \
+            .temporal_options.clock_model
         t = models.SimpleConcreteChildTemporalTable(
             prop_a=1,
             prop_b='foo',
@@ -97,7 +97,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             prop_d={'foo': 'old value'},
             prop_e=psql_extras.DateRange(datetime.date(2016, 1, 1),
                                          datetime.date(2016, 1, 10)),
-            prop_f=['old', 'stuff']
+            prop_f=['old', 'stuff'],
         )
 
         session.add(t)
@@ -115,12 +115,12 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         session.commit()
 
         t = session.query(models.SimpleConcreteChildTemporalTable).first()
-        clock_query = session.query(clock_table)
+        clock_query = session.query(clock_model)
         assert clock_query.count() == 2
 
         create_clock = clock_query.first()
         update_clock = clock_query.order_by(
-            clock_table.timestamp.desc()).first()
+            clock_model.timestamp.desc()).first()
         assert create_clock.timestamp == t.date_created
         assert update_clock.timestamp == t.date_modified
 
@@ -129,11 +129,11 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
 
         clock = clock_query.order_by(
             models.SimpleConcreteChildTemporalTable
-            .temporal_options.clock_table.tick.desc()
+            .temporal_options.clock_model.tick.desc(),
         ).first()
         for history_table in (
                 models.SimpleConcreteChildTemporalTable
-                .temporal_options.history_tables.values()):
+                .temporal_options.history_models.values()):
             clock_query = session.query(history_table).count()
             assert clock_query == 2
 
@@ -146,7 +146,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             models.SimpleConcreteChildTemporalTable
             .temporal_options.activity_cls is None)
         clock_table = models.SimpleConcreteChildTemporalTable \
-            .temporal_options.clock_table
+            .temporal_options.clock_model
         assert 'activity_id' not in clock_table.__dict__
         assert 'activity' not in clock_table.__dict__
 
@@ -157,7 +157,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
 
         t = session.query(models.TemporalTableWithDefault).first()
         clock_query = session.query(
-            models.TemporalTableWithDefault.temporal_options.clock_table)
+            models.TemporalTableWithDefault.temporal_options.clock_model)
         assert clock_query.count() == 1
         assert t.vclock == 1
         assert t.clock.count() == 1
@@ -189,7 +189,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             assert getattr(t, attr) == getattr(recorded_history, attr)
 
     def test_multiple_edits(self, session):
-        history_tables = {
+        history_models = {
             'prop_a': temporal.get_history_model(
                 models.SimpleConcreteChildTemporalTable.prop_a),
             'prop_b': temporal.get_history_model(
@@ -200,7 +200,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         session.add(t)
         session.commit()
 
-        for attr, history in history_tables.items():
+        for attr, history in history_models.items():
             clock_query = session.query(history)
             assert clock_query.count() == 1, \
                 "%r missing a history entry for initial value" % history
@@ -214,7 +214,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             t.prop_b = 'bar'
         session.commit()
 
-        for attr, history in history_tables.items():
+        for attr, history in history_models.items():
             clock_query = session.query(history)
             assert clock_query.count() == 2, \
                 "%r missing a history entry for initial value" % history
@@ -228,7 +228,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             t.prop_b = 'foobar'
         session.commit()
 
-        for attr, history in history_tables.items():
+        for attr, history in history_models.items():
             clock_query = session.query(history)
             assert clock_query.count() == 3, \
                 "%r missing a history entry for initial value" % history
@@ -238,7 +238,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
             assert getattr(t, attr) == getattr(recorded_history, attr)
 
     def test_doesnt_duplicate_unnecessary_history(self, session):
-        history_tables = {
+        history_models = {
             'prop_a': temporal.get_history_model(
                 models.SimpleConcreteChildTemporalTable.prop_a),
             'prop_b': temporal.get_history_model(
@@ -264,7 +264,7 @@ class TestTemporalConcreteBaseModels(shared.DatabaseTest):
         session.commit()
 
         assert t.vclock == 1
-        for attr, history in history_tables.items():
+        for attr, history in history_models.items():
             clock_query = session.query(history)
             assert clock_query.count() == 1, \
                 "%r missing a history entry for initial value" % history

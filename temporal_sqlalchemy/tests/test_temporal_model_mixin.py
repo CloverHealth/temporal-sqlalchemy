@@ -48,7 +48,7 @@ class TestTemporalModelMixin(shared.DatabaseTest):
             int_prop=1,
             bool_prop=True,
             activity=models.Activity(description="Activity Description"),
-            datetime_prop=datetime.datetime.now(datetime.timezone.utc)
+            datetime_prop=datetime.datetime.now(datetime.timezone.utc),
         )
 
     def test_creates_clock_table(self):
@@ -58,7 +58,7 @@ class TestTemporalModelMixin(shared.DatabaseTest):
         assert self.has_table(
             self.connection,
             clock_table.name,
-            schema=clock_table.schema
+            schema=clock_table.schema,
         )
 
     def test_create_history_tables(self):

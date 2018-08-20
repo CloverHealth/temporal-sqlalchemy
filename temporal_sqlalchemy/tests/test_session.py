@@ -15,7 +15,7 @@ class TestSession(shared.DatabaseTest):
             int_prop=1,
             bool_prop=True,
             activity=models.Activity(description="Activity Description"),
-            datetime_prop=datetime.datetime.now(datetime.timezone.utc)
+            datetime_prop=datetime.datetime.now(datetime.timezone.utc),
         )
 
     def test_errors_on_delete(self, session, newstylemodel):

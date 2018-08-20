@@ -504,5 +504,5 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         # since we never used clock_tick
         t.prop_a = 5678
 
-        with pytest.raises(AssertionError) as excinfo:
+        with pytest.raises(AssertionError):
             session.commit()

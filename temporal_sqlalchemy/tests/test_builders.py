@@ -47,7 +47,7 @@ def test_build_clock_table():
     clock_table = TemporalModel.build_clock_table(
         models.RelationalTemporalModel.__table__,
         sa.MetaData(),
-        models.TEMPORAL_SCHEMA
+        models.TEMPORAL_SCHEMA,
     )
 
     assert clock_table.name == 'relational_temporal_clock'
@@ -72,11 +72,11 @@ def test_build_clock_class():
             sa.MetaData(),
             sa.Column('id', sa.Integer, primary_key=True),
             sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
+            schema='bare_table_test_schema',
         ),
         'bare_table_single_pk_no_activity_clock',
         {'id', 'tick', 'timestamp', 'entity_id'},
-        None
+        None,
     ),
     (
         sa.Table(
@@ -85,11 +85,11 @@ def test_build_clock_class():
             sa.Column('num_id', sa.Integer, primary_key=True),
             sa.Column('text_id', sa.Text, primary_key=True),
             sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
+            schema='bare_table_test_schema',
         ),
         'bare_table_compositve_pk_no_activity_clock',
         {'id', 'tick', 'timestamp', 'entity_num_id', 'entity_text_id'},
-        None
+        None,
     ),
     (
         sa.Table(
@@ -97,11 +97,11 @@ def test_build_clock_class():
             sa.MetaData(),
             sa.Column('id', sa.Integer, primary_key=True),
             sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
+            schema='bare_table_test_schema',
         ),
         'bare_table_single_pk_with_activity_clock',
         {'id', 'tick', 'timestamp', 'entity_id', 'activity_id'},
-        models.Activity
+        models.Activity,
     ),
     (
         sa.Table(
@@ -110,19 +110,19 @@ def test_build_clock_class():
             sa.Column('num_id', sa.Integer, primary_key=True),
             sa.Column('text_id', sa.Text, primary_key=True),
             sa.Column('description', sa.Text),
-            schema='bare_table_test_schema'
+            schema='bare_table_test_schema',
         ),
         'bare_table_compositve_pk_with_activity_clock',
         {'id', 'tick', 'timestamp', 'entity_num_id', 'entity_text_id', 'activity_id'},
-        models.Activity
-    )
+        models.Activity,
+    ),
 ))
-def test_build_clock_table(table, expected_name, expected_cols, activity_class):
+def test_build_clock_tables(table, expected_name, expected_cols, activity_class):
     clock_table = build_clock_table(
         table,
         table.metadata,
         table.schema,
-        activity_class
+        activity_class,
     )
     assert clock_table.name == expected_name
     assert clock_table.metadata is table.metadata

@@ -1,3 +1,4 @@
+""" temporal session handling """
 import datetime
 import itertools
 import typing
@@ -17,7 +18,7 @@ from temporal_sqlalchemy.metadata import (
 
 def get_current_changeset(session):
     stack = session.info[CHANGESET_STACK_KEY]
-    assert len(stack) > 0
+    assert stack
 
     return stack[-1]
 
@@ -48,7 +49,7 @@ def _build_history(session, correlate_timestamp):
         obj.temporal_options.record_history_on_commit(obj, changes, session, correlate_timestamp)
 
 
-def persist_history(session: orm.Session, flush_context, instances):
+def persist_history(session: orm.Session, flush_context, instances):  # pylint: disable=unused-argument
     if any(_temporal_models(session.deleted)):
         raise ValueError("Cannot delete temporal objects.")
 
@@ -88,14 +89,14 @@ def enable_is_committing_flag(session):
     session.info[IS_COMMITTING_KEY] = True
 
     # if the session is clean, a final flush won't happen, so try to build the history now
-    if session._is_clean():
+    if session._is_clean():  # pylint: disable=protected-access
         correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
         _build_history(session, correlate_timestamp)
 
     # building the history can cause the session to be dirtied, which will in turn call another
     # flush(), so we want to check this before reseting
     # if there are more changes, flush will build them itself
-    if session._is_clean():
+    if session._is_clean():  # pylint: disable=protected-access
         session.info[IS_COMMITTING_KEY] = False
 
 
@@ -122,13 +123,13 @@ def _initialize_metadata(session):
 
     # sometimes temporalize a session after a transaction has already been open, so we need to
     # backfill any missing stack entries
-    if len(session.info[CHANGESET_STACK_KEY]) == 0:
+    if not session.info[CHANGESET_STACK_KEY]:
         depth = _get_transaction_stack_depth(session.transaction)
         for _ in range(depth):
             session.info[CHANGESET_STACK_KEY].append({})
 
 
-def start_transaction(session, transaction):
+def start_transaction(session, transaction):  # pylint: disable=unused-argument
     _initialize_metadata(session)
 
     session.info[CHANGESET_STACK_KEY].append({})
@@ -147,7 +148,7 @@ def end_transaction(session, transaction):
         session.info[IS_COMMITTING_KEY] = False
 
         # there should be no more changeset stacks at this point, otherwise there is a mismatch
-        assert len(session.info[CHANGESET_STACK_KEY]) == 0
+        assert not session.info[CHANGESET_STACK_KEY]
 
 
 def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], strict_mode=False) -> orm.Session:

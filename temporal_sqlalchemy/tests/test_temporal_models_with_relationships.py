@@ -9,7 +9,7 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         parent = models.RelationalTemporalModel(
             prop_a=1,
             prop_b='foo',
-            rel=related
+            rel=related,
         )
         session.add(parent)
         session.commit()
@@ -33,7 +33,7 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         parent = models.RelationalTemporalModel(
             prop_a=1,
             prop_b='foo',
-            rel=related
+            rel=related,
         )
         session.add(parent)
         session.commit()
@@ -70,7 +70,7 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
     def test_assign_by_rel_on_edit_init_without_rel(self, session):
         parent = models.RelationalTemporalModel(
             prop_a=1,
-            prop_b='foo'
+            prop_b='foo',
         )
         session.add(parent)
         session.commit()
@@ -105,7 +105,7 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         parent = models.RelationalTemporalModel(
             prop_a=1,
             prop_b='foo',
-            rel_id=None
+            rel_id=None,
         )
         session.add(parent)
         session.commit()

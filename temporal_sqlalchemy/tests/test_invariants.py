@@ -2,7 +2,6 @@ import datetime
 
 import pytest
 import sqlalchemy as sa
-import sqlalchemy.orm as orm
 import sqlalchemy.exc as exc
 import sqlalchemy.dialects.postgresql as sap
 

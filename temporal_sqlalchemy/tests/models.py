@@ -174,7 +174,7 @@ class JoinedEnumBase(Base):
 
     __mapper_args__ = {
         'polymorphic_on': kind,
-        'polymorphic_identity': 'default'
+        'polymorphic_identity': 'default',
     }
 
 

@@ -1,0 +1,30 @@
+version: 2
+aliases:
+  - &docker
+    docker:
+      - image: circleci/python:3.6.2
+        environment:
+          TEST_REPORTS: /tmp/test-reports
+  - &dependencies
+    name: Make virtualenv and install dependencies
+    command: |
+      pip3 install tox
+      pip3 install -q -r dev-requirements.txt
+jobs:
+  test:
+    <<: *docker
+    steps:
+      - checkout
+      - run:
+          <<: *dependencies
+      - run: tox -- --junitxml=/tmp/test-reports/junit.xml
+      - store_test_results:
+           path: /tmp/test-reports
+      - store_artifacts:
+           path: /tmp/test-reports
+
+workflows:
+  version: 2
+  tox:
+    jobs:
+      - test

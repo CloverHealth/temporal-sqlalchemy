@@ -8,9 +8,7 @@ aliases:
   - &dependencies
     name: Make virtualenv and install dependencies
     command: |
-      python3 -m venv ~/venv
-      echo ". ~/venv/bin/activate" >> $BASH_ENV
-      source $BASH_ENV
+      pip3 install tox
       pip3 install -q -r dev-requirements.txt
 jobs:
   test:
@@ -27,6 +25,6 @@ jobs:
 
 workflows:
   version: 2
-  checks_and_deploy:
+  tox:
     jobs:
       - test

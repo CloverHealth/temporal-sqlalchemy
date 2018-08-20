@@ -12,7 +12,6 @@ aliases:
       echo ". ~/venv/bin/activate" >> $BASH_ENV
       source $BASH_ENV
       pip3 install -q -r dev-requirements.txt
-      pyenv local 3.6.2 3.5.3 3.4.4
 jobs:
   test:
     <<: *docker

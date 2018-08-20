@@ -1,4 +1,2 @@
-"""Version information."""
-
-__version__ = '0.4.7'
-__version_info__ = __version__.split('.')
+"""__version__ is automatically updated with the deploy.py script. Don't touch this file"""
+__version__ = None

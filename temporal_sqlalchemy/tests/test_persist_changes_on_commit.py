@@ -366,7 +366,8 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         assert history_query.count() == 1
 
         session.commit()
-        activity_query = session.query(models.Activity).order_by(models.Activity.description)
+        activity_query = session.query(models.Activity).order_by(
+            models.Activity.description)
         assert activity_query.count() == 2
         activity_results = activity_query.all()
         assert activity_results[0].description == 'Create temp'
@@ -415,7 +416,8 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         t.prop_a = 5678
 
         session.commit()
-        activity_query = session.query(models.Activity).order_by(models.Activity.description)
+        activity_query = session.query(models.Activity).order_by(
+            models.Activity.description)
         assert activity_query.count() == 2
         activity_results = activity_query.all()
         assert activity_results[0].description == 'Create temp'
@@ -459,7 +461,8 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         t.prop_a = 5678
 
         session.commit()
-        activity_query = session.query(models.Activity).order_by(models.Activity.description)
+        activity_query = session.query(models.Activity).order_by(
+            models.Activity.description)
         assert activity_query.count() == 1
         activity_result = activity_query.first()
         assert activity_result.description == 'Create temp'

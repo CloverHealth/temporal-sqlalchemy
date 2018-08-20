@@ -1,0 +1,33 @@
+version: 2
+aliases:
+  - &docker
+    docker:
+      - image: circleci/python:3.6.2
+        environment:
+          TEST_REPORTS: /tmp/test-reports
+  - &dependencies
+    name: Make virtualenv and install dependencies
+    command: |
+      python3 -m venv ~/venv
+      echo ". ~/venv/bin/activate" >> $BASH_ENV
+      source $BASH_ENV
+      pip3 install -q -r dev-requirements.txt
+      pyenv local 3.6.2 3.5.3 3.4.4
+jobs:
+  test:
+    <<: *docker
+    steps:
+      - checkout
+      - run:
+          <<: *dependencies
+      - run: tox -- --junitxml=/tmp/test-reports/junit.xml
+      - store_test_results:
+           path: /tmp/test-reports
+      - store_artifacts:
+           path: /tmp/test-reports
+
+workflows:
+  version: 2
+  checks_and_deploy:
+    jobs:
+      - test

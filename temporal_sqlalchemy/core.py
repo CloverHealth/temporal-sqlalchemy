@@ -7,7 +7,7 @@ from temporal_sqlalchemy import bases, clock
 
 
 class TemporalModel(bases.Clocked):
-
+    """ Mixin Class the enable temporal history for a sqlalchemy model """
     @declarative.declared_attr
     def __mapper_cls__(cls):  # pylint: disable=no-self-argument
         assert hasattr(cls, 'Temporal')

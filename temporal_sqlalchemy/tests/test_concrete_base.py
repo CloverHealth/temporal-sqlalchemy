@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use, duplicate-code
 import datetime
 
 import psycopg2.extras as psql_extras

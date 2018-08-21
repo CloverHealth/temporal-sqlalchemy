@@ -21,6 +21,7 @@ disable=bad-continuation,
     wrong-import-order,
     invalid-name,
     useless-import-alias,
+    duplicate-code,  # TODO turn this on again once tests are cleaned
 
 
 [REPORTS]

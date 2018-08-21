@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import datetime
 
 import pytest
@@ -10,7 +11,7 @@ from . import shared, models
 
 def test_declaration_check():
     with pytest.raises(AssertionError):
-        class Error(models.Base, temporal.TemporalModel):
+        class Error(models.Base, temporal.TemporalModel):  # pylint: disable=unused-variable
             __tablename__ = 'new_style_temporal_model'
             __table_args__ = {'schema': models.SCHEMA}
 
@@ -32,7 +33,7 @@ def test_creates_clock_model():
     options = models.NewStyleModel.temporal_options
 
     clock_model = options.clock_model
-    assert (clock_model.__table__.name == '%s_clock' % models.NewStyleModel.__table__.name)
+    assert clock_model.__table__.name == '%s_clock' % models.NewStyleModel.__table__.name
 
     inspected = sa.inspect(clock_model)
     assert 'entity' in inspected.relationships
@@ -89,21 +90,13 @@ class TestTemporalModelMixin(shared.DatabaseTest):
 
         clock = clock_query.first()
 
-        desc_history_model = temporal.get_history_model(
-            models.NewStyleModel.description)
-        int_prop_history_model = temporal.get_history_model(
-            models.NewStyleModel.int_prop)
-        bool_prop_history_model = temporal.get_history_model(
-            models.NewStyleModel.bool_prop)
-        datetime_prop_history_model = temporal.get_history_model(
-            models.NewStyleModel.datetime_prop)
-
         for attr, backref, history_model in [
-            ('description', 'description_history', desc_history_model),
-            ('int_prop', 'int_prop_history', int_prop_history_model),
-            ('bool_prop', 'bool_prop_history', bool_prop_history_model),
-            ('datetime_prop', 'datetime_prop_history', datetime_prop_history_model),
+            ('description', 'description_history'),
+            ('int_prop', 'int_prop_history'),
+            ('bool_prop', 'bool_prop_history'),
+            ('datetime_prop', 'datetime_prop_history'),
         ]:
+            history_model = temporal.get_history_model(getattr(models.NewStyleModel, 'attr'))
             backref_history_query = getattr(t, backref)
             clock_query = session.query(history_model).count()
             assert clock_query == 1, "missing entry for %r" % history_model

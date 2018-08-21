@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import pytest
 import sqlalchemy.exc as exc
 import sqlalchemy.orm.attributes as orm_attr

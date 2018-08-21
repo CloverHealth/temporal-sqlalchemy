@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import sqlalchemy as sa
 
 from . import shared, models
@@ -64,8 +65,8 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         assert first_history.vclock < second_history.vclock
         assert first_history.effective < second_history.effective
 
-        assert not(first_history.vclock.lower in second_history.vclock)
-        assert not(second_history.vclock.lower in first_history.vclock)
+        assert first_history.vclock.lower not in second_history.vclock
+        assert second_history.vclock.lower not in first_history.vclock
 
     def test_assign_by_rel_on_edit_init_without_rel(self, session):
         parent = models.RelationalTemporalModel(
@@ -136,5 +137,5 @@ class TestTemporalRelationshipModels(shared.DatabaseTest):
         assert first_history.vclock < second_history.vclock
         assert first_history.effective < second_history.effective
 
-        assert not(first_history.vclock.lower in second_history.vclock)
-        assert not(second_history.vclock.lower in first_history.vclock)
+        assert first_history.vclock.lower not in second_history.vclock
+        assert second_history.vclock.lower not in first_history.vclock

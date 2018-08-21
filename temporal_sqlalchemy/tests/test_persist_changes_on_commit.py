@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use, redefined-outer-name
 from psycopg2.extras import NumericRange
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
@@ -91,7 +92,7 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
 
         assert session is not second_session
         # current changeset is blank (not being contaminated by other sessions)
-        assert len(second_session.info[CHANGESET_STACK_KEY][-1]) == 0
+        assert not second_session.info[CHANGESET_STACK_KEY][-1]
 
     def test_persist_only_last_change_before_flush(self, session):
         activity = models.Activity(description='Create temp')
@@ -136,7 +137,7 @@ class TestPersistChangesOnCommit(shared.DatabaseTest):
         history_result = history_query.first()
         assert history_result.prop_a == 4567
 
-    def test_mixed_models_persist_on_commit_and_regular_persist(self, session):
+    def test_mixed_models_persist_on_commit_and_regular_persist(self, session):  # pylint: disable=too-many-locals
         activity = models.Activity(description='Create temp')
         session.add(activity)
 

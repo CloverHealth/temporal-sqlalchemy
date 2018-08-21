@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import datetime
 
 import sqlalchemy as sa

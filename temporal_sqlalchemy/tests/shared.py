@@ -1,9 +1,13 @@
+# pylint: disable=missing-docstring
 import pytest
 
 from . import models
 
 
 class DatabaseTest:
+
+    engine = None
+    connection = None
 
     @pytest.fixture(autouse=True)
     def setup(self, engine, session):

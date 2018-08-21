@@ -17,6 +17,7 @@ from temporal_sqlalchemy.metadata import (
 
 
 def get_current_changeset(session):
+    """ get the current set of changes in a running flush cycle """
     stack = session.info[CHANGESET_STACK_KEY]
     assert stack
 
@@ -24,12 +25,14 @@ def get_current_changeset(session):
 
 
 def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
+    """ yield all temporal models currently in the session """
     for obj in session:
         if isinstance(getattr(obj, 'temporal_options', None), TemporalOption):
             yield obj
 
 
 def _build_history(session, correlate_timestamp):
+    """ add currently changed properties for writing on commit """
     # this shouldn't happen, but it might happen, log a warning and investigate
     if not session.info.get(CHANGESET_STACK_KEY):
         warnings.warn('changeset_stack is missing but we are in _build_history()')
@@ -50,6 +53,7 @@ def _build_history(session, correlate_timestamp):
 
 
 def persist_history(session: orm.Session, flush_context, instances):  # pylint: disable=unused-argument
+    """ commit history on session.commit  """
     if any(_temporal_models(session.deleted)):
         raise ValueError("Cannot delete temporal objects.")
 
@@ -101,6 +105,7 @@ def enable_is_committing_flag(session):
 
 
 def _get_transaction_stack_depth(transaction):
+    """ build history stack by transaction depth """
     depth = 0
 
     current = transaction
@@ -112,6 +117,7 @@ def _get_transaction_stack_depth(transaction):
 
 
 def _initialize_metadata(session):
+    """ prepare a session for temporal book keeping """
     if CHANGESET_STACK_KEY not in session.info:
         session.info[CHANGESET_STACK_KEY] = []
 
@@ -130,12 +136,14 @@ def _initialize_metadata(session):
 
 
 def start_transaction(session, transaction):  # pylint: disable=unused-argument
+    """ handle nested transaction starting """
     _initialize_metadata(session)
 
     session.info[CHANGESET_STACK_KEY].append({})
 
 
 def end_transaction(session, transaction):
+    """ end nested transaction handler """
     # there are some edge cases where no temporal changes actually happen, so don't bother
     if not session.info.get(CHANGESET_STACK_KEY):
         return
@@ -181,4 +189,5 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
 
 
 def is_temporal_session(session: orm.Session) -> bool:
+    """ checks if a given session is a real session and is temporal """
     return isinstance(session, orm.Session) and session.info.get(STRICT_MODE_KEY) is not None

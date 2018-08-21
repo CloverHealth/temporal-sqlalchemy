@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.inspection import inspect as sa_inspect
@@ -8,7 +9,6 @@ from temporal_sqlalchemy.clock import (
     build_history_class,
     build_clock_class,
     build_clock_table)
-from temporal_sqlalchemy.core import TemporalModel
 
 from . import models
 
@@ -44,7 +44,7 @@ def test_build_history_class():
 
 
 def test_build_clock_table():
-    clock_table = TemporalModel.build_clock_table(
+    clock_table = build_clock_table(
         models.RelationalTemporalModel.__table__,
         sa.MetaData(),
         models.TEMPORAL_SCHEMA,

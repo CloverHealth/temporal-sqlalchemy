@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import pytest
 import sqlalchemy as sa
 

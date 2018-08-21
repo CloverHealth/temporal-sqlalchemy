@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import temporal_sqlalchemy as temporal
 
 from . import shared, models

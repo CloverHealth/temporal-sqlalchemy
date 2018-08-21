@@ -22,6 +22,7 @@ from temporal_sqlalchemy.bases import (
 
 def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
                  schema=None, allow_persist_on_commit=False):
+    """ maps properties to temporal models, builds a clock table, handles optional activity class for changes """
     assert 'vclock' not in track
 
     cls = mapper.class_
@@ -102,6 +103,7 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
 
 
 def init_clock(obj: Clocked, args, kwargs):  # pylint: disable=unused-argument
+    """ initialize a model instance, set clocks to first tick (1) """
     kwargs.setdefault('vclock', 1)
     initial_tick = obj.temporal_options.clock_model(
         tick=kwargs['vclock'],
@@ -140,6 +142,12 @@ def materialize_defaults(obj: Clocked, kwargs):
 
 
 def defaults_safety(*track, mapper):
+    """
+        ensure client code doesn't use sqlalchemy features that break temporal:
+            column.onupdate
+            column.server_default
+            column.server_onupdate
+    """
     warnings.warn("these caveats are temporary", PendingDeprecationWarning)
     local_props = {mapper.get_property(prop) for prop in track}
     for prop in local_props:
@@ -161,6 +169,7 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
     """Decorator to add clock and history to an orm model."""
 
     def make_temporal(cls: nine.Type[Clocked]):
+        """ calls into temporal_map to set up temporal tracking for properties """
         assert issubclass(cls, Clocked), "add temporal.Clocked to %r" % cls
         mapper = cls.__mapper__
         defaults_safety(*props, mapper=mapper)
@@ -178,6 +187,7 @@ def build_clock_class(
         name: str,
         metadata: sa.MetaData,
         props: typing.Dict) -> nine.Type[EntityClock]:
+    """ build a clock model """
     base_classes = (
         EntityClock,
         declarative.declarative_base(metadata=metadata),
@@ -189,6 +199,7 @@ def build_clock_table(entity_table: sa.Table,
                       metadata: sa.MetaData,
                       schema: str,
                       activity_class=None) -> sa.Table:
+    """ build clock table to be used with a clock model """
     clock_table_name = util.truncate_identifier(
         "%s_clock" % entity_table.name)
     clock_table = sa.Table(
@@ -262,6 +273,7 @@ def build_history_class(
 
 def _generate_history_table_name(local_table: sa.Table,
                                  cols: typing.Iterable[sa.Column]) -> str:
+    """ safely generate a name for a history table based on original table name """
     base_name = '%s_history' % local_table.name
     sort_col_names = sorted(col.key for col in cols)
 
@@ -270,6 +282,7 @@ def _generate_history_table_name(local_table: sa.Table,
 
 @nine.singledispatch
 def _exclusion_in(type_, name) -> typing.Tuple:  # pylint: disable=unused-argument
+    """ do not cast Integer based primary keys """
     return name, '='
 
 
@@ -286,7 +299,7 @@ def build_history_table(
         cls: declarative.DeclarativeMeta,
         prop: T_PROPS,
         schema: str = None) -> sa.Table:
-    """build a sql alchemy table for given prop"""
+    """build a sqlalchemy history table for given prop"""
     if isinstance(prop, orm.RelationshipProperty):
         columns = [util.copy_column(column) for column in prop.local_columns]
     else:

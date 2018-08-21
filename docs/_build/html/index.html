@@ -1,0 +1,436 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Temporal SQLAlchemy &mdash; temporal_sqlalchemy 0.4.7 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="temporal_sqlalchemy 0.4.7 documentation" href="#"/>
+        <link rel="next" title="Installation" href="installation.html"/>
+        <link rel="prev" title="Table of Contents" href="toc.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="toc.html" class="icon icon-home"> temporal_sqlalchemy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.4.7
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Temporal SQLAlchemy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#some-terms">Some Terms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#methodologies">Methodologies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-and-development">Testing and Development</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-the-tests">Running the Tests</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-your-model">Using Your Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#updating-your-instance">Updating your instance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inspecting-history">Inspecting history</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing Guide</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="toc.html">temporal_sqlalchemy</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="toc.html">Docs</a> &raquo;</li>
+        
+      <li>Temporal SQLAlchemy</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="temporal-sqlalchemy">
+<h1>Temporal SQLAlchemy<a class="headerlink" href="#temporal-sqlalchemy" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="some-terms">
+<h2>Some Terms<a class="headerlink" href="#some-terms" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>Temporal</dt>
+<dd>time dimension. A property can have spatial and/or temporal dimensions,
+e.g. what it was and when it was that.</dd>
+<dt>Bi-temporal</dt>
+<dd>2x time dimensions. Allows you to separate the “valid time” of a
+property from “when we knew about it”</dd>
+<dt>Version Clock</dt>
+<dd>a simple, incrementing integer that allows you track “generation” of
+changes (also known as “vclock”)</dd>
+<dt>Version</dt>
+<dd>the state of an entity at a given version clock</dd>
+<dt>Low Velocity</dt>
+<dd>state changes infrequently or you don’t need to walk the history regularly</dd>
+<dt>High Velocity</dt>
+<dd>state changes frequently or you need to walk the history regularly.</dd>
+</dl>
+</div>
+<div class="section" id="methodologies">
+<h2>Methodologies<a class="headerlink" href="#methodologies" title="Permalink to this headline">¶</a></h2>
+<p>There exist several ways to add a temporal dimension to your data.
+<a class="reference external" href="https://SQLAlchemy-continuum.readthedocs.org/en/latest/">SQLAlchemy Continuum</a> uses a shadow or history table for each versioned
+entity.  You can add a <code class="code docutils literal"><span class="pre">date_created</span></code> and <code class="code docutils literal"><span class="pre">date_modified</span></code>
+columns to your model.</p>
+<p><strong>Temporal SQLAlchemy</strong> uses a table per property, with an entity clock – all
+state is written to the entity table as expected, but additionally recorded
+into series of history tables (per property) and clock entries (per entity).</p>
+</div>
+<div class="section" id="testing-and-development">
+<h2>Testing and Development<a class="headerlink" href="#testing-and-development" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="setup">
+<h3>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h3>
+<p>To set up your development environment, you’ll need to install a few things.
+For Python version management, we use <a class="reference external" href="https://github.com/pyenv/pyenv-virtualenv">pyenv-virtualenv</a>.
+Follow the installation instructions there, and then in the <em>root directory</em> of
+this repo run: <code class="docutils literal"><span class="pre">make</span> <span class="pre">setup</span></code></p>
+</div>
+<div class="section" id="running-the-tests">
+<h3>Running the Tests<a class="headerlink" href="#running-the-tests" title="Permalink to this headline">¶</a></h3>
+<p>To run the unit tests for all supported versions of Python, run <code class="docutils literal"><span class="pre">make</span> <span class="pre">test</span></code>. If you
+made a change to the package requirements (in <code class="docutils literal"><span class="pre">setup.py</span></code> or <code class="docutils literal"><span class="pre">test_requirements.txt</span></code>)
+then you’ll need to rebuild the environment.</p>
+</div>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>I’ll start with the caveats, as there are a few:</p>
+<ul class="simple">
+<li>you cannot track the history of properties with <code class="docutils literal"><span class="pre">onupdate</span></code>, <code class="docutils literal"><span class="pre">server_default</span></code>
+or <code class="docutils literal"><span class="pre">server_onupdate</span></code></li>
+</ul>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sqlalchemy</span> <span class="k">as</span> <span class="nn">sa</span>
+<span class="kn">import</span> <span class="nn">temporal_sqlalchemy</span> <span class="k">as</span> <span class="nn">temporal</span>
+
+<span class="k">class</span> <span class="nc">MyModel</span><span class="p">(</span><span class="n">temporal</span><span class="o">.</span><span class="n">TemporalModel</span><span class="p">,</span> <span class="n">SomeBase</span><span class="p">):</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">sa</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">sa</span><span class="o">.</span><span class="n">BigInteger</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># this will throw an error</span>
+    <span class="n">prop_a</span> <span class="o">=</span> <span class="n">sa</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">sa</span><span class="o">.</span><span class="n">Text</span><span class="p">,</span> <span class="n">onupdate</span><span class="o">=</span><span class="s1">&#39;Some Update Value&#39;</span><span class="p">)</span>
+    <span class="c1"># this will also throw an error</span>
+    <span class="n">prop_b</span> <span class="o">=</span> <span class="n">sa</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">sa</span><span class="o">.</span><span class="n">Text</span><span class="p">,</span> <span class="n">server_default</span><span class="o">=</span><span class="s1">&#39;Some Server Default&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>you have to “temporalize” your session</li>
+</ul>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sqlalchemy.orm</span> <span class="k">as</span> <span class="nn">orm</span>
+<span class="kn">import</span> <span class="nn">temporal_sqlalchemy</span> <span class="k">as</span> <span class="nn">temporal</span>
+
+<span class="n">sessionmaker</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">sessionmaker</span><span class="p">()</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">()</span>
+<span class="n">temporal</span><span class="o">.</span><span class="n">temporal_session</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+
+<span class="n">foo</span> <span class="o">=</span> <span class="n">MyModel</span><span class="p">(</span><span class="n">prop_a</span><span class="o">=</span><span class="s1">&#39;first value&#39;</span><span class="p">,</span> <span class="n">prop_b</span><span class="o">=</span><span class="s1">&#39;also first first value&#39;</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+
+<span class="k">with</span> <span class="n">foo</span><span class="o">.</span><span class="n">clock_tick</span><span class="p">():</span>
+    <span class="n">foo</span><span class="o">.</span><span class="n">prop_a</span> <span class="o">=</span> <span class="s1">&#39;new value&#39;</span>
+    <span class="n">foo</span><span class="o">.</span><span class="n">prop_b</span> <span class="o">=</span> <span class="s1">&#39;also new value&#39;</span>
+
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li>default values are tricky. If you need to record the state of a default
+value, or need <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.7)"><code class="xref any docutils literal"><span class="pre">None</span></code></a> to have historical meaning you must be deliberate.
+Additionally, we cannot currently handle callable defaults that take a
+context
+<a class="reference external" href="http://docs.sqlalchemy.org/en/rel_1_0/core/defaults.html#context-sensitive-default-functions">described here</a></li>
+</ul>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sqlalchemy</span> <span class="k">as</span> <span class="nn">sa</span>
+<span class="kn">import</span> <span class="nn">sqlalchemy.orm</span> <span class="k">as</span> <span class="nn">orm</span>
+<span class="kn">import</span> <span class="nn">temporal_sqlalchemy</span> <span class="k">as</span> <span class="nn">temporal</span>
+
+<span class="n">sessionmaker</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">sessionmaker</span><span class="p">()</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">()</span>
+<span class="n">temporal</span><span class="o">.</span><span class="n">temporal_session</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MyModel</span><span class="p">(</span><span class="n">temporal</span><span class="o">.</span><span class="n">TemporalModel</span><span class="p">,</span> <span class="n">SomeBase</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s1">&#39;my_model_table&#39;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;schema&#39;</span><span class="p">:</span> <span class="s1">&#39;my_schema&#39;</span><span class="p">}</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">sa</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">sa</span><span class="o">.</span><span class="n">BigInteger</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">sa</span><span class="o">.</span><span class="n">Column</span><span class="p">(</span><span class="n">sa</span><span class="o">.</span><span class="n">Text</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">Temporal</span><span class="p">:</span>
+        <span class="n">track</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="p">)</span>
+
+
+<span class="n">m</span> <span class="o">=</span> <span class="n">MyModel</span><span class="p">()</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+<span class="k">assert</span> <span class="n">m</span><span class="o">.</span><span class="n">vclock</span> <span class="o">==</span> <span class="mi">1</span>
+<span class="k">assert</span> <span class="n">m</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="kc">None</span>
+
+<span class="n">description_hm</span> <span class="o">=</span> <span class="n">temporal</span><span class="o">.</span><span class="n">get_history_model</span><span class="p">(</span><span class="n">MyModel</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+
+<span class="n">history</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">description_hm</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">description_hm</span><span class="o">.</span><span class="n">entity</span><span class="o">==</span><span class="n">m</span><span class="p">)</span>
+
+<span class="c1"># no history entry is created!</span>
+<span class="k">assert</span> <span class="n">history</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="c1"># do this instead</span>
+<span class="n">m2</span> <span class="o">=</span> <span class="n">MyModel</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">m2</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+<span class="k">assert</span> <span class="n">m2</span><span class="o">.</span><span class="n">vclock</span> <span class="o">==</span> <span class="mi">1</span>
+<span class="k">assert</span> <span class="n">m2</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="kc">None</span>
+
+<span class="n">history</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">description_hm</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">description_hm</span><span class="o">.</span><span class="n">entity</span><span class="o">==</span><span class="n">m2</span><span class="p">)</span>
+
+<span class="c1"># history entry is now created</span>
+<span class="k">assert</span> <span class="n">history</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-your-model">
+<h2>Using Your Model<a class="headerlink" href="#using-your-model" title="Permalink to this headline">¶</a></h2>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sqlalchemy.orm</span> <span class="k">as</span> <span class="nn">orm</span>
+<span class="kn">import</span> <span class="nn">temporal_sqlalchemy</span> <span class="k">as</span> <span class="nn">temporal</span>
+
+<span class="n">sessionmaker</span> <span class="o">=</span> <span class="n">orm</span><span class="o">.</span><span class="n">sessionmaker</span><span class="p">()</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">sessionmaker</span><span class="p">()</span>
+
+<span class="n">temporal</span><span class="o">.</span><span class="n">temporal_session</span><span class="p">(</span><span class="n">session</span><span class="p">)</span>
+<span class="n">instance</span> <span class="o">=</span> <span class="n">MyModel</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;first description&quot;</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">instance</span><span class="o">.</span><span class="n">vclock</span> <span class="o">==</span> <span class="mi">1</span>
+
+<span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="updating-your-instance">
+<h2>Updating your instance<a class="headerlink" href="#updating-your-instance" title="Permalink to this headline">¶</a></h2>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">instance</span><span class="o">.</span><span class="n">clock_tick</span><span class="p">():</span>
+    <span class="n">instance</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;second description&quot;</span>
+
+<span class="k">assert</span> <span class="n">instance</span><span class="o">.</span><span class="n">vclock</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="inspecting-history">
+<h2>Inspecting history<a class="headerlink" href="#inspecting-history" title="Permalink to this headline">¶</a></h2>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">temporal_sqlalchemy</span> <span class="k">as</span> <span class="nn">temporal</span>
+
+<span class="n">description_hm</span> <span class="o">=</span> <span class="n">temporal</span><span class="o">.</span><span class="n">get_history_model</span><span class="p">(</span><span class="n">MyModel</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+
+<span class="n">history</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">description_hm</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">description_hm</span><span class="o">.</span><span class="n">entity</span><span class="o">==</span><span class="n">instance</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">history</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">2</span>
+<span class="k">assert</span> <span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="s1">&#39;first description&#39;</span>
+<span class="k">assert</span> <span class="n">history</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="s1">&#39;second description&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="toc.html" class="btn btn-neutral" title="Table of Contents" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Clover Health.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.4.7',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

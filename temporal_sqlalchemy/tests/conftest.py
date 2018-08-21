@@ -1,3 +1,4 @@
+""" pytest fixtures for test suite """
 import pytest
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
@@ -9,6 +10,7 @@ from . import models
 
 @pytest.yield_fixture(scope='session')
 def engine():
+    """Creates a postgres database for testing, returns a sqlalchemy engine"""
     db = testing.postgresql.Postgresql()
 
     engine_ = sa.create_engine(db.url())
@@ -20,7 +22,7 @@ def engine():
 
 
 @pytest.yield_fixture(scope='session')
-def connection(engine):
+def connection(engine):  # pylint: disable=redefined-outer-name
     """Session-wide test database."""
     conn = engine.connect()
     for extension in ['uuid-ossp', 'btree_gist']:
@@ -41,6 +43,7 @@ def connection(engine):
 
 @pytest.yield_fixture(scope="session")
 def sessionmaker():
+    """ yields a temporalized sessionmaker -- per test session """
     Session = orm.sessionmaker()
 
     yield temporal.temporal_session(Session)
@@ -49,7 +52,8 @@ def sessionmaker():
 
 
 @pytest.yield_fixture()
-def session(connection: sa.engine.Connection, sessionmaker: orm.sessionmaker):
+def session(connection: sa.engine.Connection, sessionmaker: orm.sessionmaker):  # pylint: disable=redefined-outer-name
+    """ yields temporalized session -- per test """
     transaction = connection.begin()
     sess = sessionmaker(bind=connection)
 

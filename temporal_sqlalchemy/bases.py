@@ -25,6 +25,7 @@ NOT_FOUND_SENTINEL = object()
 
 
 class EntityClock:
+    """ Clock Model base -- all Clocks inherit this """
     id = sa.Column(sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     tick = sa.Column(sa.Integer, nullable=False)
     timestamp = sa.Column(sa.DateTime(True),
@@ -41,12 +42,14 @@ class TemporalProperty:
 
 
 class TemporalActivityMixin:
+    """ stub for an Activity class to have an ID property """
     @abc.abstractmethod
     def id(self):
         pass
 
 
 class TemporalOption:
+    """ Temporal Options stored on Model """
     def __init__(self,
                  history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
                  temporal_props: typing.Iterable[T_PROPS],
@@ -63,6 +66,7 @@ class TemporalOption:
 
     @property
     def clock_table(self):
+        """ DEPRECATED: use .clock_model instead -- Clock Model for this Model"""
         warnings.warn(
             'use TemporalOption.clock_model instead',
             PendingDeprecationWarning)
@@ -70,6 +74,7 @@ class TemporalOption:
 
     @property
     def history_tables(self):
+        """ DEPRECATED: use .history_models instead -- list of history models for this Model"""
         warnings.warn(
             'use TemporalOption.history_models instead',
             PendingDeprecationWarning)
@@ -154,6 +159,7 @@ class TemporalOption:
                 )
 
     def get_history(self, clocked: 'Clocked'):
+        """ return history & notify if the vclock is actually changed for this  """
         history = {}
 
         new_tick = self._get_new_tick(clocked)
@@ -170,8 +176,9 @@ class TemporalOption:
 
         return history, is_vclock_unchanged
 
-    def _cap_previous_history_row(self, clocked, new_clock, cls):
-        # Cap previous history row if exists
+    @staticmethod
+    def _cap_previous_history_row(clocked, new_clock, cls):
+        """ Cap previous history row if exists """
         if sa.inspect(clocked).identity is not None:
             # but only if it already exists!!
             effective_close = sa.func.tstzrange(
@@ -197,7 +204,8 @@ class TemporalOption:
                 }, synchronize_session=False,
             )
 
-    def _get_prop_value(self, clocked, prop):
+    @staticmethod
+    def _get_prop_value(clocked, prop):
         state = attributes.instance_state(clocked)
 
         # fires a load on any deferred columns
@@ -216,7 +224,8 @@ class TemporalOption:
 
         return NOT_FOUND_SENTINEL
 
-    def _get_new_tick(self, clocked):
+    @staticmethod
+    def _get_new_tick(clocked):
         state = attributes.instance_state(clocked)
         try:
             new_tick = state.dict['vclock']

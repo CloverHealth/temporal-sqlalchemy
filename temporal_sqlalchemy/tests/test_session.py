@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, no-self-use
 import datetime
 
 import pytest
@@ -34,7 +35,7 @@ class TestSession(shared.DatabaseTest):
         double_wrapped_session = temporal_session(session)
         assert is_temporal_session(double_wrapped_session)
 
-    def test_is_temporal_session_on_raw_session(self, session, connection):
+    def test_is_temporal_session_on_raw_session(self, session, connection):  # pylint: disable=unused-argument
         with connection.begin():
             session_maker = orm.sessionmaker()
             raw_session = session_maker(bind=connection)

@@ -1,3 +1,4 @@
+""" base classes for temporal models """
 import abc
 import collections
 import contextlib
@@ -23,14 +24,15 @@ T_PROPS = typing.TypeVar(
 NOT_FOUND_SENTINEL = object()
 
 
-class EntityClock(object):
+class EntityClock:
+    """ Clock Model base -- all Clocks inherit this """
     id = sa.Column(sap.UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     tick = sa.Column(sa.Integer, nullable=False)
     timestamp = sa.Column(sa.DateTime(True),
                           server_default=sa.func.current_timestamp())
 
 
-class TemporalProperty(object):
+class TemporalProperty:
     """mixin when constructing a property history table"""
     __table__ = None  # type: sa.Table
     entity_id = None  # type: orm.ColumnProperty
@@ -39,20 +41,21 @@ class TemporalProperty(object):
     vclock = None  # type: psql_extras.NumericRange
 
 
-class TemporalActivityMixin(object):
+class TemporalActivityMixin:
+    """ stub for an Activity class to have an ID property """
     @abc.abstractmethod
     def id(self):
         pass
 
 
-class TemporalOption(object):
-    def __init__(
-            self,
-            history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
-            temporal_props: typing.Iterable[T_PROPS],
-            clock_model: nine.Type[EntityClock],
-            activity_cls: nine.Type[TemporalActivityMixin] = None,
-            allow_persist_on_commit: bool = False):
+class TemporalOption:
+    """ Temporal Options stored on Model """
+    def __init__(self,
+                 history_models: typing.Dict[T_PROPS, nine.Type[TemporalProperty]],
+                 temporal_props: typing.Iterable[T_PROPS],
+                 clock_model: nine.Type[EntityClock],
+                 activity_cls: nine.Type[TemporalActivityMixin] = None,
+                 allow_persist_on_commit: bool = False):
         self.history_models = history_models
         self.temporal_props = temporal_props
 
@@ -63,6 +66,7 @@ class TemporalOption(object):
 
     @property
     def clock_table(self):
+        """ DEPRECATED: use .clock_model instead -- Clock Model for this Model"""
         warnings.warn(
             'use TemporalOption.clock_model instead',
             PendingDeprecationWarning)
@@ -70,6 +74,7 @@ class TemporalOption(object):
 
     @property
     def history_tables(self):
+        """ DEPRECATED: use .history_models instead -- list of history models for this Model"""
         warnings.warn(
             'use TemporalOption.history_models instead',
             PendingDeprecationWarning)
@@ -98,7 +103,8 @@ class TemporalOption(object):
 
         is_strict_mode = session.info[STRICT_MODE_KEY]
         vclock_history = attributes.get_history(clocked, 'vclock')
-        is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
+        is_vclock_unchanged = (vclock_history.unchanged and
+                               new_tick == vclock_history.unchanged[0])
 
         new_clock = self.make_clock(timestamp, new_tick)
         attr = {'entity': clocked}
@@ -120,15 +126,15 @@ class TemporalOption(object):
                     cls(
                         vclock=new_clock.vclock,
                         effective=new_clock.effective,
-                        **hist
-                    )
+                        **hist,
+                    ),
                 )
 
     def record_history_on_commit(self,
-                       clocked: 'Clocked',
-                       changes: dict,
-                       session: orm.Session,
-                       timestamp: dt.datetime):
+                                 clocked: 'Clocked',
+                                 changes: dict,
+                                 session: orm.Session,
+                                 timestamp: dt.datetime):
         """record all history for a given clocked object"""
         new_tick = self._get_new_tick(clocked)
 
@@ -148,19 +154,21 @@ class TemporalOption(object):
                     cls(
                         vclock=new_clock.vclock,
                         effective=new_clock.effective,
-                        **hist
-                    )
+                        **hist,
+                    ),
                 )
 
     def get_history(self, clocked: 'Clocked'):
+        """ return history & notify if the vclock is actually changed for this  """
         history = {}
 
         new_tick = self._get_new_tick(clocked)
 
         vclock_history = attributes.get_history(clocked, 'vclock')
-        is_vclock_unchanged = vclock_history.unchanged and new_tick == vclock_history.unchanged[0]
+        is_vclock_unchanged = (vclock_history.unchanged and
+                               new_tick == vclock_history.unchanged[0])
 
-        for prop, cls in self.history_models.items():
+        for prop in self.history_models.keys():
             value = self._get_prop_value(clocked, prop)
 
             if value is not NOT_FOUND_SENTINEL:
@@ -168,8 +176,9 @@ class TemporalOption(object):
 
         return history, is_vclock_unchanged
 
-    def _cap_previous_history_row(self, clocked, new_clock, cls):
-        # Cap previous history row if exists
+    @staticmethod
+    def _cap_previous_history_row(clocked, new_clock, cls):
+        """ Cap previous history row if exists """
         if sa.inspect(clocked).identity is not None:
             # but only if it already exists!!
             effective_close = sa.func.tstzrange(
@@ -187,15 +196,16 @@ class TemporalOption(object):
                 sa.and_(
                     sa.func.upper_inf(cls.effective),
                     sa.func.upper_inf(cls.vclock),
-                )
+                ),
             ).update(
                 {
                     cls.effective: effective_close,
                     cls.vclock: vclock_close,
-                }, synchronize_session=False
+                }, synchronize_session=False,
             )
 
-    def _get_prop_value(self, clocked, prop):
+    @staticmethod
+    def _get_prop_value(clocked, prop):
         state = attributes.instance_state(clocked)
 
         # fires a load on any deferred columns
@@ -214,18 +224,19 @@ class TemporalOption(object):
 
         return NOT_FOUND_SENTINEL
 
-    def _get_new_tick(self, clocked):
+    @staticmethod
+    def _get_new_tick(clocked):
         state = attributes.instance_state(clocked)
         try:
             new_tick = state.dict['vclock']
-        except KeyError:
+        except KeyError:  # pragma: no cover
             # TODO understand why this is necessary
             new_tick = getattr(clocked, 'vclock')
 
         return new_tick
 
 
-class Clocked(object):
+class Clocked:
     """Clocked Mixin gives you the default implementations for working
     with clocked data
 
@@ -261,9 +272,9 @@ class Clocked(object):
 
     @contextlib.contextmanager
     def clock_tick(self, activity: TemporalActivityMixin = None):
+        """Increments vclock by 1 with changes scoped to the session"""
         warnings.warn("clock_tick is going away in 0.5.0",
                       PendingDeprecationWarning)
-        """Increments vclock by 1 with changes scoped to the session"""
         if self.temporal_options.activity_cls is not None and activity is None:
             raise ValueError("activity is missing on edit") from None
 

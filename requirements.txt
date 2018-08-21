@@ -1,0 +1,4 @@
+singledispatch>=3.4.0.0;python_version<"3.4"
+sqlalchemy>=1.1.9
+psycopg2>=2.7.5
+typing>=3.5.2,<4.0.0;python_version<"3.5"

@@ -34,7 +34,7 @@ def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
 def _build_history(session, correlate_timestamp):
     """ add currently changed properties for writing on commit """
     # this shouldn't happen, but it might happen, log a warning and investigate
-    if not session.info.get(CHANGESET_STACK_KEY):
+    if not session.info.get(CHANGESET_STACK_KEY):  # pragma: no cover
         warnings.warn('changeset_stack is missing but we are in _build_history()')
         return
 
@@ -172,9 +172,9 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
 
     if isinstance(session, orm.Session):
         session.info[STRICT_MODE_KEY] = strict_mode
-    elif isinstance(session, orm.sessionmaker):
+    elif isinstance(session, orm.sessionmaker):  # pragma: no cover
         session.configure(info={STRICT_MODE_KEY: strict_mode})
-    else:
+    else:  # pragma: no cover
         raise ValueError('Invalid session')
 
     if install_flush_hook:

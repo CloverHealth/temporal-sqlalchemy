@@ -21,7 +21,7 @@ def foreign_key_to(table: sa.Table,
         yield sa.Column(name, pk.type, sa.ForeignKey(pk), **opts)
 
 
-def effective_now() -> psql_extras.DateTimeTZRange:
+def effective_now() -> psql_extras.DateTimeTZRange:  # pragma: no cover
     utc_now = dt.datetime.now(tz=dt.timezone.utc)
     return psql_extras.DateTimeTZRange(utc_now, None)
 

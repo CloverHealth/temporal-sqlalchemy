@@ -229,7 +229,7 @@ class TemporalOption:
         state = attributes.instance_state(clocked)
         try:
             new_tick = state.dict['vclock']
-        except KeyError:
+        except KeyError:  # pragma: no cover
             # TODO understand why this is necessary
             new_tick = getattr(clocked, 'vclock')
 

@@ -39,7 +39,7 @@ class SimpleTableTemporal(temporal_sqlalchemy.Clocked, Base):
     __tablename__ = 'simple_table_temporal'
     __table_args__ = {'schema': SCHEMA}
 
-    id = auto_uuid()
+    id = sa.Column(sa.Integer, primary_key=True)
     prop_a = sa.Column(sa.Integer)
     prop_b = sa.Column(sap.TEXT)
     prop_c = sa.Column(sa.DateTime(True))

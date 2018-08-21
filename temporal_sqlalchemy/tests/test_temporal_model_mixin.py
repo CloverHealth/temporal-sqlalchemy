@@ -90,13 +90,13 @@ class TestTemporalModelMixin(shared.DatabaseTest):
 
         clock = clock_query.first()
 
-        for attr, backref, history_model in [
+        for attr, backref in [
             ('description', 'description_history'),
             ('int_prop', 'int_prop_history'),
             ('bool_prop', 'bool_prop_history'),
             ('datetime_prop', 'datetime_prop_history'),
         ]:
-            history_model = temporal.get_history_model(getattr(models.NewStyleModel, 'attr'))
+            history_model = temporal.get_history_model(getattr(models.NewStyleModel, attr))
             backref_history_query = getattr(t, backref)
             clock_query = session.query(history_model).count()
             assert clock_query == 1, "missing entry for %r" % history_model

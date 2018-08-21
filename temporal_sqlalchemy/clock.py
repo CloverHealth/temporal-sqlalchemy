@@ -1,3 +1,4 @@
+""" clock and history handling """
 import itertools
 import typing
 import uuid
@@ -21,6 +22,7 @@ from temporal_sqlalchemy.bases import (
 
 def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
                  schema=None, allow_persist_on_commit=False):
+    """ maps properties to temporal models, builds a clock table, handles optional activity class for changes """
     assert 'vclock' not in track
 
     cls = mapper.class_
@@ -39,11 +41,11 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
         entity_table,
         entity_table.metadata,
         schema,
-        activity_class
+        activity_class,
     )
     clock_properties = {
         'entity': orm.relationship(
-            lambda: cls, backref=orm.backref('clock', lazy='dynamic')
+            lambda: cls, backref=orm.backref('clock', lazy='dynamic'),
         ),
         'entity_first_tick': orm.relationship(
             lambda: cls,
@@ -51,12 +53,12 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
                 'first_tick',
                 primaryjoin=sa.and_(
                     clock_table.join(entity_table).onclause,
-                    clock_table.c.tick == 1
+                    clock_table.c.tick == 1,
                 ),
                 innerjoin=True,
                 uselist=False,  # single record
-                viewonly=True  # view only
-            )
+                viewonly=True,  # view only
+            ),
         ),
         'entity_latest_tick': orm.relationship(
             lambda: cls,
@@ -64,14 +66,14 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
                 'latest_tick',
                 primaryjoin=sa.and_(
                     clock_table.join(entity_table).onclause,
-                    entity_table.c.vclock == clock_table.c.tick
+                    entity_table.c.vclock == clock_table.c.tick,
                 ),
                 innerjoin=True,
                 uselist=False,  # single record
-                viewonly=True  # view only
-            )
+                viewonly=True,  # view only
+            ),
         ),
-        '__table__': clock_table
+        '__table__': clock_table,
     }  # used to construct a new clock model for this entity
 
     if activity_class:
@@ -100,7 +102,8 @@ def temporal_map(*track, mapper: orm.Mapper, activity_class=None,
     event.listen(cls, 'init', init_clock)
 
 
-def init_clock(obj: Clocked, args, kwargs):
+def init_clock(obj: Clocked, args, kwargs):  # pylint: disable=unused-argument
+    """ initialize a model instance, set clocks to first tick (1) """
     kwargs.setdefault('vclock', 1)
     initial_tick = obj.temporal_options.clock_model(
         tick=kwargs['vclock'],
@@ -139,6 +142,12 @@ def materialize_defaults(obj: Clocked, kwargs):
 
 
 def defaults_safety(*track, mapper):
+    """
+        ensure client code doesn't use sqlalchemy features that break temporal:
+            column.onupdate
+            column.server_default
+            column.server_onupdate
+    """
     warnings.warn("these caveats are temporary", PendingDeprecationWarning)
     local_props = {mapper.get_property(prop) for prop in track}
     for prop in local_props:
@@ -160,6 +169,7 @@ def add_clock(*props: typing.Iterable[str],  # noqa: C901
     """Decorator to add clock and history to an orm model."""
 
     def make_temporal(cls: nine.Type[Clocked]):
+        """ calls into temporal_map to set up temporal tracking for properties """
         assert issubclass(cls, Clocked), "add temporal.Clocked to %r" % cls
         mapper = cls.__mapper__
         defaults_safety(*props, mapper=mapper)
@@ -177,6 +187,7 @@ def build_clock_class(
         name: str,
         metadata: sa.MetaData,
         props: typing.Dict) -> nine.Type[EntityClock]:
+    """ build a clock model """
     base_classes = (
         EntityClock,
         declarative.declarative_base(metadata=metadata),
@@ -188,6 +199,7 @@ def build_clock_table(entity_table: sa.Table,
                       metadata: sa.MetaData,
                       schema: str,
                       activity_class=None) -> sa.Table:
+    """ build clock table to be used with a clock model """
     clock_table_name = util.truncate_identifier(
         "%s_clock" % entity_table.name)
     clock_table = sa.Table(
@@ -206,7 +218,7 @@ def build_clock_table(entity_table: sa.Table,
                   server_default=sa.func.current_timestamp()),
         schema=schema)
 
-    entity_keys = list()
+    entity_keys = []
     for fk in util.foreign_key_to(entity_table, nullable=False):
         # this is done to support arbitrary primary key shape on entity
         # We don't add additional indices on the foreign keys here because
@@ -214,16 +226,13 @@ def build_clock_table(entity_table: sa.Table,
         clock_table.append_column(fk)
         entity_keys.append(fk.key)
 
-    tick_entity_unique_name = util.truncate_identifier(
-        '%s_tick_entity_id_key' % clock_table_name
-    )
+    tick_entity_unique_name = util.truncate_identifier('%s_tick_entity_id_key' % clock_table_name)
     clock_table.append_constraint(
-        sa.UniqueConstraint(*(entity_keys + ['tick']),
-                            name=tick_entity_unique_name)
+        sa.UniqueConstraint(*(entity_keys + ['tick']), name=tick_entity_unique_name),
     )
 
     if activity_class:
-        activity_keys = list()
+        activity_keys = []
         # support arbitrary shaped activity primary keys
         for fk in util.foreign_key_to(activity_class.__table__,
                                       prefix='activity',
@@ -231,9 +240,7 @@ def build_clock_table(entity_table: sa.Table,
             clock_table.append_column(fk)
             activity_keys.append(fk.key)
         # ensure we have DB constraint on clock <> activity uniqueness
-        clock_table.append_constraint(
-            sa.UniqueConstraint(*(entity_keys + activity_keys))
-        )
+        clock_table.append_constraint(sa.UniqueConstraint(*(entity_keys + activity_keys)))
 
     return clock_table
 
@@ -253,14 +260,12 @@ def build_history_class(
         '__table__': table,
         'entity': orm.relationship(
             lambda: cls,
-            backref=orm.backref('%s_history' % prop.key, lazy='dynamic')
+            backref=orm.backref('%s_history' % prop.key, lazy='dynamic'),
         ),
     }
 
     if isinstance(prop, orm.RelationshipProperty):
-        class_attrs[prop.key] = orm.relationship(
-            prop.argument,
-            lazy='noload')
+        class_attrs[prop.key] = orm.relationship(prop.argument, lazy='noload')
 
     model = type(class_name, base_classes, class_attrs)
     return model
@@ -268,6 +273,7 @@ def build_history_class(
 
 def _generate_history_table_name(local_table: sa.Table,
                                  cols: typing.Iterable[sa.Column]) -> str:
+    """ safely generate a name for a history table based on original table name """
     base_name = '%s_history' % local_table.name
     sort_col_names = sorted(col.key for col in cols)
 
@@ -275,7 +281,8 @@ def _generate_history_table_name(local_table: sa.Table,
 
 
 @nine.singledispatch
-def _exclusion_in(type_, name) -> typing.Tuple:
+def _exclusion_in(type_, name) -> typing.Tuple:  # pylint: disable=unused-argument
+    """ do not cast Integer based primary keys """
     return name, '='
 
 
@@ -292,16 +299,15 @@ def build_history_table(
         cls: declarative.DeclarativeMeta,
         prop: T_PROPS,
         schema: str = None) -> sa.Table:
-    """build a sql alchemy table for given prop"""
+    """build a sqlalchemy history table for given prop"""
     if isinstance(prop, orm.RelationshipProperty):
         columns = [util.copy_column(column) for column in prop.local_columns]
     else:
         columns = [util.copy_column(column) for column in prop.columns]
 
     local_table = cls.__table__
-    table_name = util.truncate_identifier(
-        _generate_history_table_name(local_table, columns)
-    )
+    history_table_name = _generate_history_table_name(local_table, columns)
+    table_name = util.truncate_identifier(history_table_name)
     # Build the foreign key(s), specifically adding an index since we may use
     # a casted foreign key in our constraints. See _exclusion_in_uuid
     entity_foreign_keys = list(util.foreign_key_to(local_table, index=True))
@@ -314,15 +320,15 @@ def build_history_table(
         sa.Index(
             util.truncate_identifier('%s_effective_idx' % table_name),
             'effective',
-            postgresql_using='gist'
+            postgresql_using='gist',
         ),
         sap.ExcludeConstraint(
             *itertools.chain(entity_constraints, [('vclock', '&&')]),
-            name=util.truncate_identifier('%s_excl_vclock' % table_name)
+            name=util.truncate_identifier('%s_excl_vclock' % table_name),
         ),
         sap.ExcludeConstraint(
             *itertools.chain(entity_constraints, [('effective', '&&')]),
-            name=util.truncate_identifier('%s_excl_effective' % table_name)
+            name=util.truncate_identifier('%s_excl_effective' % table_name),
         ),
     ]
 
@@ -340,5 +346,5 @@ def build_history_table(
         sa.Column('vclock', sap.INT4RANGE, nullable=False),
         *itertools.chain(entity_foreign_keys, columns, constraints),
         schema=schema or local_table.schema,
-        keep_existing=True
+        keep_existing=True,
     )  # memoization ftw

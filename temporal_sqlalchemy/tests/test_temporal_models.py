@@ -317,7 +317,7 @@ class TestTemporalModels(shared.DatabaseTest):
             t.prop_a = 2
 
             with pytest.raises(AssertionError) as excinfo:
-                eval('session.{func_name}()'.format(func_name=session_func_name))  # pylint: disable=eval-used
+                getattr(session, session_func_name)()
 
             assert re.match(
                 r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
@@ -342,7 +342,7 @@ class TestTemporalModels(shared.DatabaseTest):
         with t.clock_tick():
             t.prop_a = 1
 
-        eval('session.{func_name}()'.format(func_name=session_func_name))  # pylint: disable=eval-used
+        getattr(session, session_func_name)()
 
     @pytest.mark.parametrize('session_func_name', (
             'flush',
@@ -363,7 +363,7 @@ class TestTemporalModels(shared.DatabaseTest):
         t.prop_a = 2
 
         with pytest.raises(AssertionError) as excinfo:
-            eval('session.{func_name}()'.format(func_name=session_func_name))  # pylint: disable=eval-used
+            getattr(session, session_func_name)()
 
         assert re.match(
             r'.*flush\(\) has triggered for a changed temporalized property outside of a clock tick.*',
@@ -388,8 +388,8 @@ class TestTemporalModels(shared.DatabaseTest):
             t.prop_a = 2
 
             # this should succeed in non-strict mode
-            eval('session.{func_name}()'.format(func_name=session_func_name))  # pylint: disable=eval-used
+            getattr(session, session_func_name)()
 
         # this should also succeed in non-strict mode
         t.prop_a = 3
-        eval('session.{func_name}()'.format(func_name=session_func_name))  # pylint: disable=eval-used
+        getattr(session, session_func_name)()

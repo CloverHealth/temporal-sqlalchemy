@@ -72,6 +72,7 @@ workflows:
     jobs:
       - temple_check
       - lint
+      - test_py34
       - test_py35
       - test_py36
       - test_py37

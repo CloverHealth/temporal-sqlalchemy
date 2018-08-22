@@ -48,7 +48,7 @@ Setup
 To set up your development environment, you'll need to install a few things.
 For Python version management, we use `pyenv-virtualenv <https://github.com/pyenv/pyenv-virtualenv>`_.
 Follow the installation instructions there, and then in the *root directory* of
-this repo run: ``make setup``
+this repo run: ``make setup`` Please note, temporal-sqlalchemy only supports python versions >= 3.5.
 
 Running the Tests
 ~~~~~~~~~~~~~~~~~

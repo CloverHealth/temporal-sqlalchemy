@@ -1,5 +1,4 @@
-import sqlalchemy.orm as orm
-
+""" metadata keys for session handling """
 __all__ = [
     'STRICT_MODE_KEY',
     'CHANGESET_STACK_KEY',

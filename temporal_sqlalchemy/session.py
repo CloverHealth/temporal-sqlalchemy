@@ -1,3 +1,4 @@
+""" temporal session handling """
 import datetime
 import itertools
 import typing
@@ -16,21 +17,24 @@ from temporal_sqlalchemy.metadata import (
 
 
 def get_current_changeset(session):
+    """ get the current set of changes in a running flush cycle """
     stack = session.info[CHANGESET_STACK_KEY]
-    assert len(stack) > 0
+    assert stack
 
     return stack[-1]
 
 
 def _temporal_models(session: orm.Session) -> typing.Iterable[Clocked]:
+    """ yield all temporal models currently in the session """
     for obj in session:
         if isinstance(getattr(obj, 'temporal_options', None), TemporalOption):
             yield obj
 
 
 def _build_history(session, correlate_timestamp):
+    """ add currently changed properties for writing on commit """
     # this shouldn't happen, but it might happen, log a warning and investigate
-    if not session.info.get(CHANGESET_STACK_KEY):
+    if not session.info.get(CHANGESET_STACK_KEY):  # pragma: no cover
         warnings.warn('changeset_stack is missing but we are in _build_history()')
         return
 
@@ -48,7 +52,8 @@ def _build_history(session, correlate_timestamp):
         obj.temporal_options.record_history_on_commit(obj, changes, session, correlate_timestamp)
 
 
-def persist_history(session: orm.Session, flush_context, instances):
+def persist_history(session: orm.Session, flush_context, instances):  # pylint: disable=unused-argument
+    """ commit history on session.commit  """
     if any(_temporal_models(session.deleted)):
         raise ValueError("Cannot delete temporal objects.")
 
@@ -88,18 +93,19 @@ def enable_is_committing_flag(session):
     session.info[IS_COMMITTING_KEY] = True
 
     # if the session is clean, a final flush won't happen, so try to build the history now
-    if session._is_clean():
+    if session._is_clean():  # pylint: disable=protected-access
         correlate_timestamp = datetime.datetime.now(tz=datetime.timezone.utc)
         _build_history(session, correlate_timestamp)
 
     # building the history can cause the session to be dirtied, which will in turn call another
     # flush(), so we want to check this before reseting
     # if there are more changes, flush will build them itself
-    if session._is_clean():
+    if session._is_clean():  # pylint: disable=protected-access
         session.info[IS_COMMITTING_KEY] = False
 
 
 def _get_transaction_stack_depth(transaction):
+    """ build history stack by transaction depth """
     depth = 0
 
     current = transaction
@@ -111,6 +117,7 @@ def _get_transaction_stack_depth(transaction):
 
 
 def _initialize_metadata(session):
+    """ prepare a session for temporal book keeping """
     if CHANGESET_STACK_KEY not in session.info:
         session.info[CHANGESET_STACK_KEY] = []
 
@@ -122,19 +129,21 @@ def _initialize_metadata(session):
 
     # sometimes temporalize a session after a transaction has already been open, so we need to
     # backfill any missing stack entries
-    if len(session.info[CHANGESET_STACK_KEY]) == 0:
+    if not session.info[CHANGESET_STACK_KEY]:
         depth = _get_transaction_stack_depth(session.transaction)
         for _ in range(depth):
             session.info[CHANGESET_STACK_KEY].append({})
 
 
-def start_transaction(session, transaction):
+def start_transaction(session, transaction):  # pylint: disable=unused-argument
+    """ handle nested transaction starting """
     _initialize_metadata(session)
 
     session.info[CHANGESET_STACK_KEY].append({})
 
 
 def end_transaction(session, transaction):
+    """ end nested transaction handler """
     # there are some edge cases where no temporal changes actually happen, so don't bother
     if not session.info.get(CHANGESET_STACK_KEY):
         return
@@ -147,7 +156,7 @@ def end_transaction(session, transaction):
         session.info[IS_COMMITTING_KEY] = False
 
         # there should be no more changeset stacks at this point, otherwise there is a mismatch
-        assert len(session.info[CHANGESET_STACK_KEY]) == 0
+        assert not session.info[CHANGESET_STACK_KEY]
 
 
 def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], strict_mode=False) -> orm.Session:
@@ -163,9 +172,9 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
 
     if isinstance(session, orm.Session):
         session.info[STRICT_MODE_KEY] = strict_mode
-    elif isinstance(session, orm.sessionmaker):
+    elif isinstance(session, orm.sessionmaker):  # pragma: no cover
         session.configure(info={STRICT_MODE_KEY: strict_mode})
-    else:
+    else:  # pragma: no cover
         raise ValueError('Invalid session')
 
     if install_flush_hook:
@@ -180,4 +189,5 @@ def temporal_session(session: typing.Union[orm.Session, orm.sessionmaker], stric
 
 
 def is_temporal_session(session: orm.Session) -> bool:
+    """ checks if a given session is a real session and is temporal """
     return isinstance(session, orm.Session) and session.info.get(STRICT_MODE_KEY) is not None

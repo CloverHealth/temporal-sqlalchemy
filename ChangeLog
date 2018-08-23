@@ -1,2 +1,54 @@
 CHANGES
 =======
+
+0.4.7
+-----
+
+* Session.info workaround for .flush or .commit inside clock tick
+
+0.4.6
+-----
+
+* Fix Version increment after persist on commit
+
+0.4.2
+-----
+
+* Index entity IDs + Converged Data Models
+
+0.4.1
+-----
+
+* Fixing order of constraint keys to preserve compatibility with migrations
+
+0.4.0
+-----
+
+* Merge decorator and mixin forms of temporal into one single flow.
+
+0.3.4
+-----
+
+* Adds explicit indices to the models on the foreign keys to the clocked tables on history tables
+
+0.3.3
+-----
+
+* Bug fixes:
+ * Issue #26: Replace compound primary keys (entity_id, tick) on temporal clock tables with
+ * Single column primary keys (id UUID column)
+ * Unique constraint on (entity_id, tick)
+
+0.3.2
+-----
+
+* New features:
+ * strict_mode flag to raise assertion exceptions if a session flush will lead to undefined vclock updates (issue #21)
+* Bug fixes:
+ * Issue #20: Detect if issues are already temporalized and allow double-wrapping
+ * Issue #19: Fix mapper configuration to allow unit tests to run in isolation
+
+0.3.0
+-----
+
+First actual release -- separated out from api_service as a separate package.

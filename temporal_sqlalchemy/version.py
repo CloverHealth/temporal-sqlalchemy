@@ -1,2 +1,2 @@
 """__version__ is automatically updated with the deploy.py script. Don't touch this file"""
-__version__ = '0.4.8'
+__version__ = '0.5.0'
